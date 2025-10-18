@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Map Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .game-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(45deg, #0f1419 0%, #1a2332 50%, #0f1419 100%);
+            overflow: hidden;
+        }
+
+        .map-canvas {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            cursor: grab;
+        }
+
+        .map-canvas:active {
+            cursor: grabbing;
+        }
+
+        .map-object {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid #00ff88;
+            background: radial-gradient(circle, rgba(0,255,136,0.3) 0%, rgba(0,255,136,0.1) 70%, transparent 100%);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 0 20px rgba(0,255,136,0.5);
+        }
+
+        .map-object:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 30px rgba(0,255,136,0.8);
+        }
+
+        .map-object.discovered {
+            border-color: #ff6b35;
+            background: radial-gradient(circle, rgba(255,107,53,0.3) 0%, rgba(255,107,53,0.1) 70%, transparent 100%);
+            box-shadow: 0 0 20px rgba(255,107,53,0.5);
+        }
+
+        .map-object.unlocked {
+            border-color: #ffd700;
+            background: radial-gradient(circle, rgba(255,215,0,0.3) 0%, rgba(255,215,0,0.1) 70%, transparent 100%);
+            box-shadow: 0 0 20px rgba(255,215,0,0.5);
+        }
+
+        .sidebar {
+            width: 350px;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            border-left: 1px solid rgba(255,255,255,0.1);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .player-stats {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .object-details {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .object-details.active {
+            display: block;
+        }
+
+        .object-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00ff88;
+        }
+
+        .object-description {
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .interaction-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #00ff88;
+            color: #000;
+        }
+
+        .btn-secondary {
+            background: #ff6b35;
+            color: white;
+        }
+
+        .btn-info {
+            background: #4fc3f7;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .llm-content {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .llm-content.active {
+            display: block;
+        }
+
+        .content-type-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .tab {
+            padding: 5px 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .tab.active {
+            background: #00ff88;
+            color: #000;
+        }
+
+        .video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .video-container.active {
+            display: flex;
+        }
+
+        .video-player {
+            width: 80%;
+            height: 80%;
+            border-radius: 10px;
+        }
+
+        .close-video {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid #00ff88;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,255,136,0.9);
+            color: #000;
+            padding: 15px 20px;
+            border-radius: 10px;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1001;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="map-container">
+            <div class="map-canvas" id="mapCanvas">
+                <!-- Map objects will be dynamically added here -->
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="player-stats">
+                <h3>Player Stats</h3>
+                <div class="stat-item">
+                    <span>Level:</span>
+                    <span id="playerLevel">1</span>
+                </div>
+                <div class="stat-item">
+                    <span>Experience:</span>
+                    <span id="playerExp">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Objects Discovered:</span>
+                    <span id="objectsDiscovered">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Total Interactions:</span>
+                    <span id="totalInteractions">0</span>
+                </div>
+            </div>
+
+            <div class="object-details" id="objectDetails">
+                <div class="object-name" id="objectName"></div>
+                <div class="object-description" id="objectDescription"></div>
+                
+                <div class="interaction-buttons">
+                    <button class="btn btn-primary" onclick="generateContent('description')">Get Description</button>
+                    <button class="btn btn-secondary" onclick="generateContent('story')">Hear Story</button>
+                    <button class="btn btn-info" onclick="generateContent('facts')">Learn Facts</button>
+                </div>
+
+                <div class="llm-content" id="llmContent">
+                    <div class="content-type-tabs">
+                        <div class="tab active" onclick="showContentType('description')">Description</div>
+                        <div class="tab" onclick="showContentType('story')">Story</div>
+                        <div class="tab" onclick="showContentType('facts')">Facts</div>
+                    </div>
+                    <div id="contentDisplay"></div>
+                </div>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div>Generating content...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="video-container" id="videoContainer">
+        <button class="close-video" onclick="closeVideo()">&times;</button>
+        <video class="video-player" id="videoPlayer" controls>
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        let mapObjects = [];
+        let selectedObject = null;
+        let playerId = generatePlayerId();
+        let playerStats = {
+            level: 1,
+            experience: 0,
+            discovered: 0,
+            interactions: 0
+        };
+
+        // Initialize the game
+        async function initGame() {
+            await loadMapObjects();
+            await loadPlayerProgress();
+            renderMap();
+            updatePlayerStats();
+        }
+
+        // Generate unique player ID
+        function generatePlayerId() {
+            return 'player_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+        }
+
+        // Load map objects from API
+        async function loadMapObjects() {
+            try {
+                const response = await fetch('/api/Map/objects');
+                mapObjects = await response.json();
+            } catch (error) {
+                console.error('Error loading map objects:', error);
+                showNotification('Error loading map objects', 'error');
+            }
+        }
+
+        // Load player progress
+        async function loadPlayerProgress() {
+            // In a real implementation, this would load from the database
+            // For now, we'll use localStorage
+            const saved = localStorage.getItem('playerProgress');
+            if (saved) {
+                playerStats = JSON.parse(saved);
+            }
+        }
+
+        // Save player progress
+        function savePlayerProgress() {
+            localStorage.setItem('playerProgress', JSON.stringify(playerStats));
+        }
+
+        // Render the map
+        function renderMap() {
+            const canvas = document.getElementById('mapCanvas');
+            canvas.innerHTML = '';
+
+            mapObjects.forEach(obj => {
+                const element = document.createElement('div');
+                element.className = 'map-object';
+                element.style.left = obj.x + 'px';
+                element.style.top = obj.y + 'px';
+                element.innerHTML = getObjectIcon(obj.type);
+                element.title = obj.name;
+                
+                if (obj.isUnlocked) {
+                    element.classList.add('unlocked');
+                } else if (obj.isDiscoverable) {
+                    element.classList.add('discovered');
+                }
+
+                element.onclick = () => selectObject(obj);
+                canvas.appendChild(element);
+            });
+        }
+
+        // Get icon for object type
+        function getObjectIcon(type) {
+            const icons = {
+                'Aircraft': '✈️',
+                'Spacecraft': '🚀',
+                'Satellite': '🛰️',
+                'Helicopter': '🚁',
+                'Rocket': '🚀',
+                'Museum': '🏛️',
+                'default': '⭐'
+            };
+            return icons[type] || icons.default;
+        }
+
+        // Select an object
+        function selectObject(obj) {
+            selectedObject = obj;
+            showObjectDetails(obj);
+            logInteraction(obj.id, 'click');
+        }
+
+        // Show object details
+        function showObjectDetails(obj) {
+            const details = document.getElementById('objectDetails');
+            const name = document.getElementById('objectName');
+            const description = document.getElementById('objectDescription');
+
+            name.textContent = obj.name;
+            description.textContent = obj.description || 'No description available.';
+            
+            details.classList.add('active');
+        }
+
+        // Generate content using LLM
+        async function generateContent(contentType) {
+            if (!selectedObject) return;
+
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/api/LLM/generate-content', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        playerId: playerId,
+                        mapObjectId: selectedObject.id,
+                        contentType: contentType
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to generate content');
+                }
+
+                const data = await response.json();
+                displayGeneratedContent(data.content, contentType);
+                
+                // Update player stats
+                playerStats.interactions++;
+                playerStats.experience += 10;
+                updatePlayerStats();
+                savePlayerProgress();
+                
+                showNotification('Content generated successfully!', 'success');
+            } catch (error) {
+                console.error('Error generating content:', error);
+                showNotification('Error generating content', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Display generated content
+        function displayGeneratedContent(content, contentType) {
+            const contentDisplay = document.getElementById('contentDisplay');
+            contentDisplay.textContent = content;
+            
+            const llmContent = document.getElementById('llmContent');
+            llmContent.classList.add('active');
+            
+            showContentType(contentType);
+        }
+
+        // Show content type tab
+        function showContentType(type) {
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // Show/hide loading
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            if (show) {
+                loading.classList.add('active');
+            } else {
+                loading.classList.remove('active');
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification show ${type}`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Log interaction
+        async function logInteraction(objectId, interactionType, data = null) {
+            try {
+                await fetch(`/api/Map/objects/${objectId}/interact`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        playerId: playerId,
+                        interactionType: interactionType,
+                        interactionData: data
+                    })
+                });
+            } catch (error) {
+                console.error('Error logging interaction:', error);
+            }
+        }
+
+        // Update player stats display
+        function updatePlayerStats() {
+            document.getElementById('playerLevel').textContent = playerStats.level;
+            document.getElementById('playerExp').textContent = playerStats.experience;
+            document.getElementById('objectsDiscovered').textContent = playerStats.discovered;
+            document.getElementById('totalInteractions').textContent = playerStats.interactions;
+        }
+
+        // Close video
+        function closeVideo() {
+            const videoContainer = document.getElementById('videoContainer');
+            const videoPlayer = document.getElementById('videoPlayer');
+            
+            videoContainer.classList.remove('active');
+            videoPlayer.pause();
+            videoPlayer.currentTime = 0;
+        }
+
+        // Initialize the game when page loads
+        document.addEventListener('DOMContentLoaded', initGame);
+    </script>
+</body>
+</html>
