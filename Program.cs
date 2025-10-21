@@ -9,7 +9,15 @@ builder.Services.AddHttpClient();
 
 // Add Entity Framework
 builder.Services.AddDbContext<MapGameDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        // Fallback to user secrets for development
+        connectionString = builder.Configuration["ConnectionStrings:DefaultConnection"];
+    }
+    options.UseSqlServer(connectionString);
+});
 
 // Add CORS
 builder.Services.AddCors(options =>
