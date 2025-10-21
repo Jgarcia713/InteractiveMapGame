@@ -4,7 +4,7 @@
 
 ### Prerequisites
 - .NET 8.0 SDK installed
-- SQL Server LocalDB or SQL Server Express
+- Access to the team's MSSQL server (credentials provided separately)
 - OpenAI API Key (for AI features)
 
 ### Step 1: Clone and Restore
@@ -14,56 +14,70 @@ cd InteractiveMapGame
 dotnet restore
 ```
 
-### Step 2: Database Setup
+### Step 2: Database Setup (MSSQL Server)
 
-**Option A: SQL Server LocalDB (Recommended for Development)**
-```bash
-# Install SQL Server LocalDB if not already installed
-# Download from: https://docs.microsoft.com/en-us/sql/database-engine/configure-windows/sql-server-express-localdb
+**Configure User Secrets for Database Connection**
 
-# Create and update the database
-dotnet ef database update
-```
+The project uses **User Secrets** to securely store database credentials. This ensures sensitive information is not committed to version control.
 
-**Option B: SQL Server Express**
-1. Install SQL Server Express from: https://www.microsoft.com/en-us/sql-server/sql-server-downloads
-2. Update connection string in `appsettings.json`:
-   ```json
-   {
-     "ConnectionStrings": {
-       "DefaultConnection": "Server=localhost;Database=InteractiveMapGame;Trusted_Connection=true;MultipleActiveResultSets=true"
-     }
-   }
+1. **Initialize User Secrets** (if not already done):
+   ```bash
+   dotnet user-secrets init
    ```
-3. Run: `dotnet ef database update`
 
-**Option C: SQLite (Alternative)**
-1. Install SQLite package: `dotnet add package Microsoft.EntityFrameworkCore.Sqlite`
-2. Update `Program.cs` to use SQLite:
-   ```csharp
-   builder.Services.AddDbContext<MapGameDbContext>(options =>
-       options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+2. **Set Database Connection String**:
+   ```bash
+   dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=YOUR_SERVER_NAME;Database=InteractiveMapGame;User Id=YOUR_USERNAME;Password=YOUR_PASSWORD;TrustServerCertificate=true;MultipleActiveResultSets=true"
    ```
-3. Update connection string:
-   ```json
-   {
-     "ConnectionStrings": {
-       "DefaultConnection": "Data Source=InteractiveMapGame.db"
-     }
-   }
+
+   **Replace the placeholders with your actual credentials:**
+   - `YOUR_SERVER_NAME` - The MSSQL server name/IP address
+   - `YOUR_USERNAME` - Your database username  
+   - `YOUR_PASSWORD` - Your database password
+
+3. **Verify User Secrets**:
+   ```bash
+   dotnet user-secrets list
    ```
+
+4. **Create Database Tables**:
+   ```bash
+   dotnet ef database update
+   ```
+
+5. **Populate with Sample Data**:
+   ```bash
+   # Start the application
+   dotnet run
+   
+   # In another terminal, call the seeding endpoint
+   Invoke-WebRequest -Uri "http://localhost:5004/api/Map/seed" -Method POST
+   ```
+
+**Note**: The `appsettings.json` file contains an empty connection string - this is intentional. The actual connection string is stored securely in user secrets.
 
 ### Step 3: Configure OpenAI API
-1. Get API key from https://platform.openai.com/api-keys
-2. Add to `appsettings.json`:
-   ```json
-   {
-     "OpenAI": {
-       "ApiKey": "your-api-key-here"
-     }
-   }
-   ```
-   Or set environment variable: `OpenAI__ApiKey=your-api-key-here`
+
+**Option A: Using User Secrets (Recommended)**
+```bash
+dotnet user-secrets set "OpenAI:ApiKey" "your-api-key-here"
+```
+
+**Option B: Using appsettings.json**
+```json
+{
+  "OpenAI": {
+    "ApiKey": "your-api-key-here"
+  }
+}
+```
+
+**Option C: Using Environment Variables**
+```bash
+set OpenAI__ApiKey=your-api-key-here
+```
+
+**Get your API key from**: https://platform.openai.com/api-keys
 
 ### Step 4: Run the Application
 ```bash
@@ -71,26 +85,23 @@ dotnet run
 ```
 
 ### Step 5: Test the Setup
-- Open browser to `http://localhost:5000`
+- Open browser to `http://localhost:5004`
 - You should see the interactive map interface
 - Try clicking on objects and generating AI content
+- Visit `http://localhost:5004/swagger` for API documentation
 
-## 🎮 Adding Sample Data
+## 🎮 Sample Data
 
-### Create Sample Map Objects
-```bash
-# Run this SQL script in your database to add sample objects
-```
+The project includes a **seeding endpoint** that automatically populates the database with 16 aerospace objects including:
 
-```sql
-INSERT INTO MapObjects (Name, Description, Type, Category, Era, Manufacturer, X, Y, Z, IsDiscoverable, IsUnlocked, CreatedAt, UpdatedAt)
-VALUES 
-('SR-71 Blackbird', 'The fastest aircraft ever built', 'Aircraft', 'Reconnaissance', '1960s', 'Lockheed', 100, 150, 0, 1, 1, GETUTCDATE(), GETUTCDATE()),
-('Apollo 11 Command Module', 'The spacecraft that took humans to the moon', 'Spacecraft', 'Manned', '1960s', 'North American Aviation', 200, 100, 0, 1, 1, GETUTCDATE(), GETUTCDATE()),
-('Hubble Space Telescope', 'Revolutionary space observatory', 'Satellite', 'Scientific', '1990s', 'Lockheed Martin', 150, 200, 0, 1, 0, GETUTCDATE(), GETUTCDATE()),
-('F-22 Raptor', 'Fifth-generation fighter aircraft', 'Aircraft', 'Fighter', '2000s', 'Lockheed Martin', 300, 250, 0, 1, 0, GETUTCDATE(), GETUTCDATE()),
-('Space Shuttle Discovery', 'Most flown space shuttle', 'Spacecraft', 'Manned', '1980s', 'Rockwell International', 250, 300, 0, 1, 0, GETUTCDATE(), GETUTCDATE());
-```
+- **Aircraft**: SR-71 Blackbird, F-22 Raptor, Boeing 747, Concorde
+- **Spacecraft**: Apollo 11, Space Shuttle Discovery, Dragon Capsule  
+- **Satellites**: Hubble Space Telescope, Sputnik 1, GPS Satellite
+- **Rockets**: Saturn V, Falcon Heavy
+- **Helicopters**: Bell UH-1 Iroquois, Apache AH-64
+- **Museums**: National Air and Space Museum, Kennedy Space Center
+
+**The seeding is automatic** - just follow Step 2 above and the database will be populated with sample data.
 
 ## 🔧 Development Tools
 
@@ -100,18 +111,19 @@ VALUES
 - **Visual Studio Code**: Install "SQL Server (mssql)" extension
 
 ### API Testing
-- **Swagger UI**: `http://localhost:5000/swagger`
+- **Swagger UI**: `http://localhost:5004/swagger`
 - **Postman**: Import the API collection
-- **curl**: Use the provided examples
+- **PowerShell**: Use `Invoke-WebRequest` for testing endpoints
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
 **Database Connection Errors**
-- Ensure SQL Server is running
-- Check connection string format
-- Verify database exists
+- Verify user secrets are set correctly: `dotnet user-secrets list`
+- Check MSSQL server is accessible from your machine
+- Ensure database credentials are correct
+- Test connection string format
 
 **OpenAI API Errors**
 - Verify API key is correct
@@ -152,6 +164,40 @@ SELECT InteractionType, COUNT(*) as Count FROM InteractionLogs GROUP BY Interact
 SELECT COUNT(*) as TotalCalls, SUM(LLMTokens) as TotalTokens 
 FROM InteractionLogs WHERE UsedLLM = 1;
 ```
+
+## 🔐 Security & User Secrets
+
+### What are User Secrets?
+User Secrets allow you to store sensitive configuration data (like database connection strings and API keys) locally on your development machine without committing them to version control.
+
+### Managing User Secrets
+```bash
+# List all secrets
+dotnet user-secrets list
+
+# Set a secret
+dotnet user-secrets set "Key" "Value"
+
+# Remove a secret
+dotnet user-secrets remove "Key"
+
+# Clear all secrets
+dotnet user-secrets clear
+```
+
+### Security Best Practices
+- ✅ **Never commit secrets** to version control
+- ✅ **Use user secrets** for development
+- ✅ **Use environment variables** for production
+- ✅ **Rotate credentials** regularly
+- ❌ **Don't hardcode** sensitive data in code
+- ❌ **Don't share** user secrets files
+
+### Team Collaboration
+- Each team member needs their own user secrets
+- Share connection details through secure channels (not in code)
+- Use the same database server for consistency
+- Document any additional configuration needed
 
 ## 🚀 Deployment
 
