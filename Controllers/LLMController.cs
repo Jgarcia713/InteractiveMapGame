@@ -197,6 +197,11 @@ namespace InteractiveMapGame.Controllers
 
         private string CreateSystemPrompt(MapObject mapObject, string contentType)
         {
+            if (contentType.ToLower() == "conversation")
+            {
+                return "You are an expert conversational AI map guide. Use the GeneratedDescription field from the map object as your primary source of facts to answer the user's question, and be concise.";
+            }
+
             var basePrompt = $"You are an expert aerospace historian and museum guide. You are helping visitors learn about {mapObject.Name}, a {mapObject.Type}";
             
             if (!string.IsNullOrEmpty(mapObject.Category))
@@ -231,9 +236,23 @@ namespace InteractiveMapGame.Controllers
             if (!string.IsNullOrEmpty(mapObject.Description))
                 baseInfo += $"\nCurrent Description: {mapObject.Description}";
 
+            // If specificRequest is provided, use the new format with GeneratedDescription as context
             if (!string.IsNullOrEmpty(specificRequest))
             {
-                return $"{baseInfo}\n\nSpecific request: {specificRequest}";
+                if (!string.IsNullOrEmpty(mapObject.GeneratedDescription))
+                {
+                    return $"CONTEXT: {mapObject.GeneratedDescription}\n\nUSER QUESTION: {specificRequest}";
+                }
+                else
+                {
+                    return $"{baseInfo}\n\nSpecific request: {specificRequest}";
+                }
+            }
+
+            // For conversation type, include the GeneratedDescription as the primary source
+            if (contentType.ToLower() == "conversation" && !string.IsNullOrEmpty(mapObject.GeneratedDescription))
+            {
+                baseInfo += $"\n\nPrimary Source (GeneratedDescription): {mapObject.GeneratedDescription}";
             }
 
             return contentType.ToLower() switch
@@ -241,6 +260,7 @@ namespace InteractiveMapGame.Controllers
                 "description" => $"{baseInfo}\n\nGenerate an engaging description for museum visitors.",
                 "story" => $"{baseInfo}\n\nTell an interesting story about this object.",
                 "facts" => $"{baseInfo}\n\nShare fascinating facts about this object.",
+                "conversation" => $"{baseInfo}\n\nAnswer the user's question based on the provided information.",
                 _ => $"{baseInfo}\n\nProvide information about this object."
             };
         }
