@@ -36,6 +36,7 @@
             height: 100%;
             position: relative;
             cursor: grab;
+            z-index: 1; /* above webgl */
         }
 
         .map-canvas:active {
@@ -56,6 +57,7 @@
             justify-content: center;
             font-size: 20px;
             box-shadow: 0 0 20px rgba(0,255,136,0.5);
+            z-index: 2; /* above map canvas */
         }
 
         .map-object:hover {
@@ -89,6 +91,12 @@
             border-radius: 10px;
             padding: 15px;
             margin-bottom: 20px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
         }
 
         .stat-item {
@@ -345,7 +353,25 @@
             animation: spin 1s linear infinite;
             margin-right: 10px;
         }
+
+        /* WebGL canvas behind UI */
+        .webgl-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
     </style>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.159.0/build/three.module.js",
+            "three/examples/jsm/": "https://unpkg.com/three@0.159.0/examples/jsm/"
+        }
+    }
+    </script>
 </head>
 <body>
     <div class="game-container">
@@ -356,6 +382,9 @@
         </div>
 
         <div class="sidebar">
+            <div class="toolbar">
+                <button class="btn btn-primary" id="toggleMarkersBtn" onclick="toggleMarkers()">Hide Markers</button>
+            </div>
             <div class="player-stats">
                 <h3>Player Stats</h3>
                 <div class="stat-item">
@@ -494,6 +523,22 @@
                 element.onclick = () => selectObject(obj);
                 canvas.appendChild(element);
             });
+        }
+
+        // Toggle 2D markers visibility and allow interacting with 3D map
+        function toggleMarkers() {
+            const canvas = document.getElementById('mapCanvas');
+            const btn = document.getElementById('toggleMarkersBtn');
+            const hidden = canvas.style.display === 'none';
+            if (hidden) {
+                canvas.style.display = '';
+                btn.textContent = 'Hide Markers';
+                // restore pointer events to markers layer
+                canvas.style.pointerEvents = '';
+            } else {
+                canvas.style.display = 'none';
+                btn.textContent = 'Show Markers';
+            }
         }
 
         // Get icon for object type
@@ -710,6 +755,78 @@
 
         // Initialize the game when page loads
         document.addEventListener('DOMContentLoaded', initGame);
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+        import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+
+        const container = document.querySelector('.map-container');
+        if (!container) {
+            console.warn('Three.js init skipped: .map-container not found');
+        } else {
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        container.prepend(renderer.domElement);
+        renderer.domElement.classList.add('webgl-canvas');
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 10000);
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 5;
+            controls.maxDistance = 5000;
+
+            scene.add(new THREE.HemisphereLight(0xffffff, 0x202020, 0.8));
+            const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+            dir.position.set(100, 200, 100);
+            scene.add(dir);
+
+            const gltfLoader = new GLTFLoader();
+            const dracoLoader = new DRACOLoader();
+            dracoLoader.setDecoderPath('https://unpkg.com/three@0.159.0/examples/jsm/libs/draco/');
+            gltfLoader.setDRACOLoader(dracoLoader);
+
+            gltfLoader.load('/assets/mansion_map.glb', (gltf) => {
+                const terrain = gltf.scene;
+                scene.add(terrain);
+
+                const box = new THREE.Box3().setFromObject(terrain);
+                const size = box.getSize(new THREE.Vector3());
+                const center = box.getCenter(new THREE.Vector3());
+
+                controls.target.copy(center);
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const fitDist = maxDim * 1.2;
+                camera.position.set(center.x - fitDist * 0.7, center.y + fitDist * 0.5, center.z + fitDist * 0.7);
+                controls.update();
+            }, (evt) => {
+                if (evt.lengthComputable) {
+                    const pct = (evt.loaded / evt.total * 100).toFixed(1);
+                    console.log(`Loading model: ${pct}%`);
+                } else {
+                    console.log(`Loading model: ${evt.loaded} bytes`);
+                }
+            }, (err) => {
+                console.error('Failed to load GLB:', err);
+            });
+
+            function onResize() {
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+            }
+            window.addEventListener('resize', onResize);
+
+            (function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            })();
+        }
     </script>
 </body>
 </html>
