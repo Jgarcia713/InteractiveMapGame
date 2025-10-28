@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.StaticFiles;
 using InteractiveMapGame.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -60,7 +61,16 @@ app.UseCors("AllowAll");
 
 // Enable static files
 app.UseDefaultFiles();
-app.UseStaticFiles();
+
+// Serve static files including GLB/GLTF/KTX2 with proper content types
+var staticFileProvider = new FileExtensionContentTypeProvider();
+staticFileProvider.Mappings[".glb"] = "model/gltf-binary";
+staticFileProvider.Mappings[".gltf"] = "model/gltf+json";
+staticFileProvider.Mappings[".ktx2"] = "image/ktx2";
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = staticFileProvider
+});
 
 app.UseRouting();
 
