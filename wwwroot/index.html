@@ -411,15 +411,11 @@
                 
                 <div class="interaction-buttons">
                     <button class="btn btn-primary" onclick="generateContent('description')">Get Description</button>
-                    <button class="btn btn-secondary" onclick="generateContent('story')">Hear Story</button>
-                    <button class="btn btn-info" onclick="generateContent('facts')">Learn Facts</button>
                 </div>
 
                 <div class="llm-content" id="llmContent">
                     <div class="content-type-tabs">
                         <div class="tab active" onclick="showContentType('description')">Description</div>
-                        <div class="tab" onclick="showContentType('story')">Story</div>
-                        <div class="tab" onclick="showContentType('facts')">Facts</div>
                     </div>
                     <div id="contentDisplay"></div>
                 </div>
@@ -623,14 +619,23 @@
             const llmContent = document.getElementById('llmContent');
             llmContent.classList.add('active');
             
-            showContentType(contentType);
+            // Since there's only one tab now, just ensure it's active
+            showContentType('description');
         }
 
         // Show content type tab
         function showContentType(type) {
             const tabs = document.querySelectorAll('.tab');
             tabs.forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
+            
+            // Find the tab that matches the content type
+            const targetTab = Array.from(tabs).find(tab => 
+                tab.textContent.toLowerCase() === type.toLowerCase()
+            );
+            
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
         }
 
         // Show/hide loading
