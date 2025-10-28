@@ -265,6 +265,86 @@
         .notification.show {
             transform: translateX(0);
         }
+
+        .chatbot-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .chatbot-section h3 {
+            margin-bottom: 15px;
+            color: #00ff88;
+            font-size: 1.1em;
+        }
+
+        .chatbot-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chatbot-container label {
+            font-size: 14px;
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 5px;
+        }
+
+        .chatbot-container textarea {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 5px;
+            padding: 10px;
+            color: white;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 80px;
+            transition: border-color 0.3s ease;
+        }
+
+        .chatbot-container textarea:focus {
+            outline: none;
+            border-color: #00ff88;
+            box-shadow: 0 0 5px rgba(0,255,136,0.3);
+        }
+
+        .chatbot-container textarea::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+
+        .chat-response {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            min-height: 60px;
+            display: none;
+            border-left: 3px solid #00ff88;
+        }
+
+        .chat-response.active {
+            display: block;
+        }
+
+        .chat-response.loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .chat-response.loading::before {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top: 2px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
@@ -319,6 +399,16 @@
             <div class="loading" id="loading">
                 <div class="spinner"></div>
                 <div>Generating content...</div>
+            </div>
+
+            <div class="chatbot-section">
+                <h3>Conversational Chatbot</h3>
+                <div class="chatbot-container">
+                    <label for="chatInput">Ask your map guide anything:</label>
+                    <textarea id="chatInput" placeholder="Type your question here..."></textarea>
+                    <button class="btn btn-primary" onclick="sendChatMessage()">Ask Map Guide</button>
+                    <div class="chat-response" id="chatResponse"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -554,6 +644,68 @@
             videoContainer.classList.remove('active');
             videoPlayer.pause();
             videoPlayer.currentTime = 0;
+        }
+
+        // Send chat message to the map guide
+        async function sendChatMessage() {
+            const chatInput = document.getElementById('chatInput');
+            const chatResponse = document.getElementById('chatResponse');
+            const message = chatInput.value.trim();
+
+            if (!message) {
+                showNotification('Please enter a message', 'error');
+                return;
+            }
+
+            if (!selectedObject) {
+                showNotification('Please select a map object first', 'error');
+                return;
+            }
+
+            // Show loading state
+            chatResponse.className = 'chat-response loading';
+            chatResponse.textContent = 'Map guide is thinking...';
+
+            try {
+                const response = await fetch('/api/LLM/generate-content', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        playerId: playerId,
+                        mapObjectId: selectedObject.id,
+                        contentType: 'conversation',
+                        specificRequest: message
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to get response from map guide');
+                }
+
+                const data = await response.json();
+                
+                // Display the response
+                chatResponse.className = 'chat-response active';
+                chatResponse.textContent = data.content;
+                
+                // Clear the input
+                chatInput.value = '';
+                
+                // Update player stats
+                playerStats.interactions++;
+                playerStats.experience += 5;
+                updatePlayerStats();
+                savePlayerProgress();
+                
+                showNotification('Map guide responded!', 'success');
+            } catch (error) {
+                console.error('Error sending chat message:', error);
+                chatResponse.className = 'chat-response active';
+                chatResponse.textContent = 'Sorry, I encountered an error. Please try again.';
+                showNotification('Error communicating with map guide', 'error');
+            }
         }
 
         // Initialize the game when page loads
