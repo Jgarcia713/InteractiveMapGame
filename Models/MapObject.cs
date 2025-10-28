@@ -56,8 +56,11 @@ namespace InteractiveMapGame.Models
         public int DifficultyLevel { get; set; } = 1;
         
         // LLM-generated content
+        [StringLength(2000)]
         public string? GeneratedDescription { get; set; }
+        [StringLength(2000)]
         public string? GeneratedStory { get; set; }
+        [StringLength(2000)]
         public string? GeneratedFacts { get; set; }
         
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
