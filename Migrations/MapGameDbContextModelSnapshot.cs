@@ -78,7 +78,7 @@ namespace InteractiveMapGame.Migrations
 
                     b.HasIndex("Timestamp");
 
-                    b.ToTable("InteractionLogs");
+                    b.ToTable("InteractionLogs", (string)null);
                 });
 
             modelBuilder.Entity("InteractiveMapGame.Models.MapObject", b =>
@@ -183,7 +183,7 @@ namespace InteractiveMapGame.Migrations
 
                     b.HasIndex("X", "Y", "Z");
 
-                    b.ToTable("MapObjects");
+                    b.ToTable("MapObjects", (string)null);
                 });
 
             modelBuilder.Entity("InteractiveMapGame.Models.PlayerProgress", b =>
@@ -252,7 +252,7 @@ namespace InteractiveMapGame.Migrations
 
                     b.HasIndex("SessionId");
 
-                    b.ToTable("PlayerProgress");
+                    b.ToTable("PlayerProgress", (string)null);
                 });
 #pragma warning restore 612, 618
         }

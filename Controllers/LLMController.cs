@@ -27,17 +27,42 @@ namespace InteractiveMapGame.Controllers
         [HttpPost("generate-content")]
         public async Task<ActionResult<LLMResponse>> GenerateContent([FromBody] LLMRequest request)
         {
-            var apiKey = _configuration["OpenAI:ApiKey"];
-            if (string.IsNullOrWhiteSpace(apiKey))
-            {
-                return StatusCode(500, "OpenAI API key is not configured.");
-            }
-
             // Get the map object for context
             var mapObject = await _context.MapObjects.FindAsync(request.MapObjectId);
             if (mapObject == null)
             {
                 return NotFound("Map object not found");
+            }
+
+            // For description requests, check if we already have a generated description
+            if (request.ContentType.ToLower() == "description" && !string.IsNullOrWhiteSpace(mapObject.GeneratedDescription))
+            {
+                // Log the interaction (retrieval from database)
+                var interaction = new InteractionLog
+                {
+                    PlayerId = request.PlayerId,
+                    MapObjectId = request.MapObjectId,
+                    InteractionType = "Description_Retrieval",
+                    InteractionData = JsonSerializer.Serialize(new { ContentType = request.ContentType, Source = "Database" }),
+                    WasSuccessful = true,
+                    UsedLLM = false,
+                    LLMPrompt = null,
+                    LLMResponse = mapObject.GeneratedDescription,
+                    LLMTokens = null,
+                    Timestamp = DateTime.UtcNow
+                };
+
+                _context.InteractionLogs.Add(interaction);
+                await _context.SaveChangesAsync();
+
+                return Ok(new LLMResponse(mapObject.GeneratedDescription, request.ContentType));
+            }
+
+            // If no cached description or not a description request, generate new content
+            var apiKey = _configuration["OpenAI:ApiKey"];
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                return StatusCode(500, "OpenAI API key is not configured.");
             }
 
             var systemPrompt = CreateSystemPrompt(mapObject, request.ContentType);
@@ -79,6 +104,14 @@ namespace InteractiveMapGame.Controllers
                     .GetProperty("content")
                     .GetString() ?? string.Empty;
 
+                // If this is a description request, save it to the database for future use
+                if (request.ContentType.ToLower() == "description")
+                {
+                    mapObject.GeneratedDescription = content;
+                    mapObject.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+
                 // Log the LLM interaction
                 var interaction = new InteractionLog
                 {
@@ -104,6 +137,97 @@ namespace InteractiveMapGame.Controllers
             {
                 return StatusCode(500, $"Error calling OpenAI API: {ex.Message}");
             }
+        }
+
+        // POST: api/LLM/populate-all-descriptions
+        [HttpPost("populate-all-descriptions")]
+        public async Task<ActionResult> PopulateAllDescriptions()
+        {
+            var apiKey = _configuration["OpenAI:ApiKey"];
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                return StatusCode(500, "OpenAI API key is not configured.");
+            }
+
+            // Get all map objects that don't have generated descriptions
+            var objectsToProcess = await _context.MapObjects
+                .Where(m => string.IsNullOrWhiteSpace(m.GeneratedDescription))
+                .ToListAsync();
+
+            if (objectsToProcess.Count == 0)
+            {
+                return Ok(new { message = "All MapObjects already have generated descriptions!", count = 0 });
+            }
+
+            var httpClient = _httpClientFactory.CreateClient();
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            int processed = 0;
+            int successful = 0;
+            int failed = 0;
+
+            foreach (var mapObject in objectsToProcess)
+            {
+                processed++;
+                try
+                {
+                    var systemPrompt = CreateSystemPrompt(mapObject, "description");
+                    var userPrompt = CreateUserPrompt(mapObject, "description", null);
+
+                    var payload = new
+                    {
+                        model = "gpt-3.5-turbo",
+                        messages = new object[]
+                        {
+                            new { role = "system", content = systemPrompt },
+                            new { role = "user", content = userPrompt }
+                        },
+                        temperature = 0.7,
+                        max_tokens = 500
+                    };
+
+                    var httpContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+                    
+                    using var response = await httpClient.PostAsync("https://api.openai.com/v1/chat/completions", httpContent);
+                    
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        failed++;
+                        continue;
+                    }
+
+                    using var stream = await response.Content.ReadAsStreamAsync();
+                    using var doc = await JsonDocument.ParseAsync(stream);
+                    var root = doc.RootElement;
+                    var content = root
+                        .GetProperty("choices")[0]
+                        .GetProperty("message")
+                        .GetProperty("content")
+                        .GetString() ?? string.Empty;
+
+                    // Save to database
+                    mapObject.GeneratedDescription = content;
+                    mapObject.UpdatedAt = DateTime.UtcNow;
+                    
+                    await _context.SaveChangesAsync();
+                    successful++;
+                }
+                catch (Exception)
+                {
+                    failed++;
+                }
+
+                // Small delay to be respectful to the API
+                await Task.Delay(1000);
+            }
+
+            return Ok(new { 
+                message = "Description generation complete!", 
+                processed = processed,
+                successful = successful, 
+                failed = failed 
+            });
         }
 
         // POST: api/LLM/populate-object
