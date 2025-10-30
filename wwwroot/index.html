@@ -558,6 +558,10 @@
             logInteraction(obj.id, 'click');
         }
 
+        // Expose data/functions for module script (3D placement)
+        window.getMapObjects = () => mapObjects;
+        window.selectObject = selectObject;
+
         // Show object details
         function showObjectDetails(obj) {
             const details = document.getElementById('objectDetails');
@@ -795,8 +799,15 @@
             dracoLoader.setDecoderPath('https://unpkg.com/three@0.159.0/examples/jsm/libs/draco/');
             gltfLoader.setDRACOLoader(dracoLoader);
 
+            let terrain = null;
+            let planeTemplate = null;
+            const exhibitGroups = [];
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+
+            // Load terrain first
             gltfLoader.load('/assets/mansion_map.glb', (gltf) => {
-                const terrain = gltf.scene;
+                terrain = gltf.scene;
                 scene.add(terrain);
 
                 const box = new THREE.Box3().setFromObject(terrain);
@@ -808,6 +819,9 @@
                 const fitDist = maxDim * 1.2;
                 camera.position.set(center.x - fitDist * 0.7, center.y + fitDist * 0.5, center.z + fitDist * 0.7);
                 controls.update();
+
+                // After terrain, load plane template
+                loadPlaneTemplate();
             }, (evt) => {
                 if (evt.lengthComputable) {
                     const pct = (evt.loaded / evt.total * 100).toFixed(1);
@@ -818,6 +832,106 @@
             }, (err) => {
                 console.error('Failed to load GLB:', err);
             });
+
+            function loadPlaneTemplate() {
+                gltfLoader.load('/assets/plane.glb', (gltf) => {
+                    planeTemplate = gltf.scene;
+                    // Normalize template scale to a manageable size
+                    const bbox = new THREE.Box3().setFromObject(planeTemplate);
+                    const sz = bbox.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+                    const targetSize = 10; // meters
+                    const s = targetSize / maxDim;
+                    planeTemplate.scale.setScalar(s);
+                    placeExhibitsIfReady();
+                }, undefined, (err) => {
+                    console.error('Failed to load plane.glb:', err);
+                });
+            }
+
+            function placeExhibitsIfReady() {
+                if (!terrain || !planeTemplate) return;
+                const getMapObjects = window.getMapObjects;
+                if (!getMapObjects) return;
+                const objects = getMapObjects();
+                if (!objects || !objects.length) return;
+
+                // Compute 2D data extents
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                for (const o of objects) {
+                    if (typeof o.x !== 'number' || typeof o.y !== 'number') continue;
+                    if (o.x < minX) minX = o.x; if (o.x > maxX) maxX = o.x;
+                    if (o.y < minY) minY = o.y; if (o.y > maxY) maxY = o.y;
+                }
+                if (!isFinite(minX) || !isFinite(maxX) || minX === maxX || minY === maxY) {
+                    console.warn('Invalid object coordinate extents; skipping 3D placement');
+                    return;
+                }
+
+                const tBox = new THREE.Box3().setFromObject(terrain);
+                const tMin = tBox.min, tMax = tBox.max;
+
+                const mapRange = (v, a1, a2, b1, b2) => b1 + (b2 - b1) * ((v - a1) / (a2 - a1));
+
+                // Helper to drop a point to terrain surface using raycast
+                const dropToTerrain = (x, z) => {
+                    const origin = new THREE.Vector3(x, tMax.y + 1000, z);
+                    const direction = new THREE.Vector3(0, -1, 0);
+                    raycaster.set(origin, direction);
+                    const hits = raycaster.intersectObject(terrain, true);
+                    if (hits.length) return hits[0].point.y;
+                    return tBox.min.y;
+                };
+
+                // Clear previous
+                for (const g of exhibitGroups) scene.remove(g);
+                exhibitGroups.length = 0;
+
+                // Place
+                for (const o of objects) {
+                    if (!o || typeof o.x !== 'number' || typeof o.y !== 'number') continue;
+                    const worldX = mapRange(o.x, minX, maxX, tMin.x, tMax.x);
+                    const worldZ = mapRange(o.y, minY, maxY, tMin.z, tMax.z);
+                    const worldY = dropToTerrain(worldX, worldZ);
+
+                    const inst = planeTemplate.clone(true);
+                    const group = new THREE.Group();
+                    group.add(inst);
+                    group.position.set(worldX, worldY + 0.5, worldZ);
+                    group.userData.mapObject = o;
+                    // Orient upright
+                    group.rotation.y = Math.random() * Math.PI * 2;
+                    scene.add(group);
+                    exhibitGroups.push(group);
+                }
+
+                // Enable picking
+                renderer.domElement.addEventListener('pointerdown', (ev) => {
+                    const rect = renderer.domElement.getBoundingClientRect();
+                    mouse.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+                    mouse.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+                    raycaster.setFromCamera(mouse, camera);
+                    const meshes = [];
+                    for (const g of exhibitGroups) g.traverse((n) => { if ((n).isMesh) meshes.push(n); });
+                    const hits = raycaster.intersectObjects(meshes, true);
+                    if (hits.length) {
+                        let node = hits[0].object;
+                        while (node && !node.userData.mapObject) node = node.parent;
+                        if (node && node.userData.mapObject && window.selectObject) {
+                            window.selectObject(node.userData.mapObject);
+                        }
+                    }
+                });
+            }
+
+            // Try to place exhibits again after the page’s data loads
+            window.addEventListener('load', () => setTimeout(placeExhibitsIfReady, 0));
+            // Also poll briefly in case mapObjects arrive slightly later
+            let tries = 0;
+            const timer = setInterval(() => {
+                placeExhibitsIfReady();
+                if (++tries > 20) clearInterval(timer);
+            }, 250);
 
             function onResize() {
                 renderer.setSize(container.clientWidth, container.clientHeight);
