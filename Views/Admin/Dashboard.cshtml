@@ -1,0 +1,121 @@
+@{
+    ViewData["Title"] = "Dashboard";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h2>
+            <span class="text-muted">Welcome back, @ViewBag.Admin.FullName!</span>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-map-marked-alt fa-2x text-primary mb-3"></i>
+                <h5 class="card-title">Map Objects</h5>
+                <h3 class="text-primary" id="mapObjectsCount">-</h3>
+                <p class="text-muted">Total objects on map</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-eye fa-2x text-success mb-3"></i>
+                <h5 class="card-title">Interactions</h5>
+                <h3 class="text-success" id="interactionsCount">-</h3>
+                <p class="text-muted">Total interactions</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-users fa-2x text-info mb-3"></i>
+                <h5 class="card-title">Admins</h5>
+                <h3 class="text-info" id="adminsCount">-</h3>
+                <p class="text-muted">Active administrators</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-clock fa-2x text-warning mb-3"></i>
+                <h5 class="card-title">Sessions</h5>
+                <h3 class="text-warning" id="sessionsCount">-</h3>
+                <p class="text-muted">Active sessions</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Recent Activity</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-chart-line fa-3x mb-3"></i>
+                    <p>Activity tracking will be implemented here</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="@Url.Action("Content", "Admin")" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-2"></i>Manage Content
+                    </a>
+                    <a href="@Url.Action("Map", "Admin")" class="btn btn-outline-success">
+                        <i class="fas fa-map me-2"></i>View Map
+                    </a>
+                    <a href="@Url.Action("Admins", "Admin")" class="btn btn-outline-info">
+                        <i class="fas fa-users me-2"></i>Manage Admins
+                    </a>
+                    <a href="@Url.Action("Analytics", "Admin")" class="btn btn-outline-warning">
+                        <i class="fas fa-chart-bar me-2"></i>View Analytics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Load dashboard statistics
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardStats();
+        });
+
+        async function loadDashboardStats() {
+            try {
+                // These would be API calls to get actual data
+                // For now, we'll simulate with placeholder data
+                document.getElementById('mapObjectsCount').textContent = '16';
+                document.getElementById('interactionsCount').textContent = '0';
+                document.getElementById('adminsCount').textContent = '1';
+                document.getElementById('sessionsCount').textContent = '1';
+            } catch (error) {
+                console.error('Error loading dashboard stats:', error);
+            }
+        }
+    </script>
+}
