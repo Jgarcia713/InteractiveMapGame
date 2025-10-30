@@ -1,0 +1,120 @@
+@model IEnumerable<InteractiveMapGame.Models.Admin>
+@{
+    ViewData["Title"] = "Admin Management";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-users me-2"></i>Admin Management</h2>
+            <a href="@Url.Action("CreateAdmin", "Admin")" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add New Admin
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                @{
+                    var admins = ViewBag.Admins as List<InteractiveMapGame.Models.Admin>;
+                }
+                @if (admins != null && admins.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Full Name</th>
+                                    <th>Status</th>
+                                    <th>Role</th>
+                                    <th>Last Login</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var admin in admins)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@admin.Username</strong>
+                                            @if (admin.Id == ViewBag.Admin.Id)
+                                            {
+                                                <span class="badge bg-primary ms-2">You</span>
+                                            }
+                                        </td>
+                                        <td>@admin.Email</td>
+                                        <td>@(admin.FullName ?? "-")</td>
+                                        <td>
+                                            @if (admin.IsActive)
+                                            {
+                                                <span class="badge bg-success">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger">Inactive</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (admin.IsSuperAdmin)
+                                            {
+                                                <span class="badge bg-warning">Super Admin</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-info">Admin</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (admin.LastLoginAt.HasValue)
+                                            {
+                                                @admin.LastLoginAt.Value.ToString("MMM dd, yyyy HH:mm")
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Never</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                @if (admin.Id != ViewBag.Admin.Id)
+                                                {
+                                                    <form asp-action="ToggleAdminStatus" asp-route-id="@admin.Id" method="post" class="d-inline">
+                                                        <button type="submit" class="btn btn-sm @(admin.IsActive ? "btn-warning" : "btn-success")" 
+                                                                onclick="return confirm('Are you sure you want to @(admin.IsActive ? "deactivate" : "activate") this admin?')">
+                                                            <i class="fas fa-@(admin.IsActive ? "ban" : "check")"></i>
+                                                        </button>
+                                                    </form>
+                                                    
+                                                    <form asp-action="DeleteAdmin" asp-route-id="@admin.Id" method="post" class="d-inline">
+                                                        <button type="submit" class="btn btn-sm btn-danger" 
+                                                                onclick="return confirm('Are you sure you want to delete this admin? This action cannot be undone.')">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No admins found</h5>
+                        <p class="text-muted">Create the first admin to get started</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
