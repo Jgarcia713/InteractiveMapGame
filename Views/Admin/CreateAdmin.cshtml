@@ -1,0 +1,87 @@
+@model InteractiveMapGame.Controllers.CreateAdminViewModel
+@{
+    ViewData["Title"] = "Create Admin";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create New Admin</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="CreateAdmin" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Username" class="form-label">
+                                <i class="fas fa-user me-1"></i>Username *
+                            </label>
+                            <input asp-for="Username" class="form-control" placeholder="Enter username" />
+                            <span asp-validation-for="Username" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Email" class="form-label">
+                                <i class="fas fa-envelope me-1"></i>Email *
+                            </label>
+                            <input asp-for="Email" class="form-control" placeholder="Enter email" />
+                            <span asp-validation-for="Email" class="text-danger"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label">
+                            <i class="fas fa-id-card me-1"></i>Full Name
+                        </label>
+                        <input asp-for="FullName" class="form-control" placeholder="Enter full name (optional)" />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Password" class="form-label">
+                                <i class="fas fa-lock me-1"></i>Password *
+                            </label>
+                            <input asp-for="Password" class="form-control" placeholder="Enter password" />
+                            <span asp-validation-for="Password" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="ConfirmPassword" class="form-label">
+                                <i class="fas fa-lock me-1"></i>Confirm Password *
+                            </label>
+                            <input asp-for="ConfirmPassword" class="form-control" placeholder="Confirm password" />
+                            <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input asp-for="IsSuperAdmin" class="form-check-input" />
+                            <label asp-for="IsSuperAdmin" class="form-check-label">
+                                <i class="fas fa-crown me-1"></i>Super Admin
+                            </label>
+                            <div class="form-text">Super admins have full access to all features including admin management.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Create Admin
+                        </button>
+                        <a href="@Url.Action("Admins", "Admin")" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

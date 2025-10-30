@@ -10,8 +10,9 @@ namespace InteractiveMapGame.Data
         }
 
         public DbSet<MapObject> MapObjects { get; set; }
-        public DbSet<PlayerProgress> PlayerProgress { get; set; }
         public DbSet<InteractionLog> InteractionLogs { get; set; }
+        public DbSet<Admin> Admins { get; set; }
+        public DbSet<AdminSession> AdminSessions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -45,9 +46,9 @@ namespace InteractiveMapGame.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.PlayerId).IsRequired().HasMaxLength(64);
                 entity.Property(e => e.SessionId).IsRequired().HasMaxLength(64);
-                entity.Property(e => e.UnlockedObjects).HasColumnType("nvarchar(max)");
-                entity.Property(e => e.CompletedQuests).HasColumnType("nvarchar(max)");
-                entity.Property(e => e.PlayerPreferences).HasColumnType("nvarchar(max)");
+                entity.Property(e => e.UnlockedObjects).HasColumnType("TEXT");
+                entity.Property(e => e.CompletedQuests).HasColumnType("TEXT");
+                entity.Property(e => e.PlayerPreferences).HasColumnType("TEXT");
                 
                 entity.HasIndex(e => e.PlayerId);
                 entity.HasIndex(e => e.SessionId);
@@ -66,6 +67,38 @@ namespace InteractiveMapGame.Data
                 entity.HasIndex(e => e.PlayerId);
                 entity.HasIndex(e => e.MapObjectId);
                 entity.HasIndex(e => e.Timestamp);
+            });
+
+            // Configure Admin
+            modelBuilder.Entity<Admin>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Username).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Email).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.FullName).HasMaxLength(100);
+                
+                entity.HasIndex(e => e.Username).IsUnique();
+                entity.HasIndex(e => e.Email).IsUnique();
+                entity.HasIndex(e => e.IsActive);
+            });
+
+            // Configure AdminSession
+            modelBuilder.Entity<AdminSession>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.SessionToken).IsRequired().HasMaxLength(64);
+                entity.Property(e => e.IpAddress).IsRequired().HasMaxLength(45);
+                entity.Property(e => e.UserAgent).HasMaxLength(500);
+                
+                entity.HasIndex(e => e.SessionToken).IsUnique();
+                entity.HasIndex(e => e.AdminId);
+                entity.HasIndex(e => e.ExpiresAt);
+                
+                entity.HasOne(e => e.Admin)
+                    .WithMany(e => e.Sessions)
+                    .HasForeignKey(e => e.AdminId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

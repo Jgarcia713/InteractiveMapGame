@@ -1,12 +1,17 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.StaticFiles;
 using InteractiveMapGame.Data;
+using InteractiveMapGame.Services;
+using InteractiveMapGame.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllersWithViews();
 builder.Services.AddHttpClient();
+
+// Add authentication service
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Add Entity Framework
 builder.Services.AddDbContext<MapGameDbContext>(options =>
@@ -17,7 +22,7 @@ builder.Services.AddDbContext<MapGameDbContext>(options =>
         // Fallback to user secrets for development
         connectionString = builder.Configuration["ConnectionStrings:DefaultConnection"];
     }
-    options.UseSqlServer(connectionString);
+    options.UseSqlite(connectionString);
 });
 
 // Add CORS
@@ -58,6 +63,9 @@ if (app.Environment.IsDevelopment())
 
 // Enable CORS
 app.UseCors("AllowAll");
+
+// Add admin authentication middleware
+app.UseAdminAuth();
 
 // Enable static files
 app.UseDefaultFiles();
