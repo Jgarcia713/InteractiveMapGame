@@ -12,6 +12,7 @@ namespace InteractiveMapGame.Data
         public DbSet<MapObject> MapObjects { get; set; }
         public DbSet<PlayerProgress> PlayerProgress { get; set; }
         public DbSet<InteractionLog> InteractionLogs { get; set; }
+        public DbSet<Admin> Admins { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -66,6 +67,17 @@ namespace InteractiveMapGame.Data
                 entity.HasIndex(e => e.PlayerId);
                 entity.HasIndex(e => e.MapObjectId);
                 entity.HasIndex(e => e.Timestamp);
+            });
+
+            // Configure Admin
+            modelBuilder.Entity<Admin>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Username).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(256);
+                entity.Property(e => e.Email).HasMaxLength(200);
+                
+                entity.HasIndex(e => e.Username).IsUnique();
             });
         }
     }
