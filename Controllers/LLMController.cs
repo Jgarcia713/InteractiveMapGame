@@ -122,12 +122,12 @@ namespace InteractiveMapGame.Controllers
                 }
 
                 string content;
-                JsonElement root;
+                int? tokenCount = null;
                 try
                 {
                     using var stream = await resp.Content.ReadAsStreamAsync();
                     using var doc = await JsonDocument.ParseAsync(stream);
-                    root = doc.RootElement;
+                    var root = doc.RootElement;
                     
                     // Validate response structure
                     if (!root.TryGetProperty("choices", out var choices) || choices.GetArrayLength() == 0)
@@ -155,6 +155,15 @@ namespace InteractiveMapGame.Controllers
                     {
                         var errorMsg = "OpenAI API returned empty content";
                         return StatusCode(500, new { error = errorMsg, statusCode = 500 });
+                    }
+                    
+                    // Extract token count before disposing the document
+                    if (root.TryGetProperty("usage", out var usage))
+                    {
+                        if (usage.TryGetProperty("total_tokens", out var tokens))
+                        {
+                            tokenCount = tokens.GetInt32();
+                        }
                     }
                 }
                 catch (JsonException jsonEx)
@@ -191,8 +200,7 @@ namespace InteractiveMapGame.Controllers
                     UsedLLM = true,
                     LLMPrompt = truncatedPrompt,
                     LLMResponse = truncatedResponse,
-                    LLMTokens = root.TryGetProperty("usage", out var usage) ? 
-                        (usage.TryGetProperty("total_tokens", out var tokens) ? tokens.GetInt32() : null) : null,
+                    LLMTokens = tokenCount,
                     Timestamp = DateTime.UtcNow
                 };
 

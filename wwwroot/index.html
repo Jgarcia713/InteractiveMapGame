@@ -418,9 +418,18 @@
             renderMap();
         }
 
-        // Generate unique player ID
+        // Generate unique player ID (persists across page refreshes)
         function generatePlayerId() {
-            return 'player_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+            // Check if we already have a player ID stored
+            let storedId = localStorage.getItem('playerId');
+            if (storedId) {
+                return storedId;
+            }
+            
+            // Generate a new ID and store it
+            const newId = 'player_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+            localStorage.setItem('playerId', newId);
+            return newId;
         }
 
         // Load map objects from API
@@ -715,14 +724,25 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to get response from map guide');
+                    const errorText = await response.text();
+                    console.error('API error response:', response.status, errorText);
+                    throw new Error(`Failed to get response from map guide: ${response.status}`);
                 }
 
                 const data = await response.json();
+                console.log('Chatbot response data:', data);
+                
+                // Handle both camelCase and PascalCase property names
+                const content = data.content || data.Content;
+                
+                if (!content) {
+                    console.error('No content in response:', data);
+                    throw new Error('Response missing content field');
+                }
                 
                 // Display the response
                 chatResponse.className = 'chat-response active';
-                chatResponse.textContent = data.content;
+                chatResponse.textContent = content;
                 
                 // Clear the input
                 chatInput.value = '';
