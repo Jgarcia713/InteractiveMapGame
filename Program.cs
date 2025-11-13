@@ -38,7 +38,16 @@ builder.Services.AddDbContext<MapGameDbContext>(options =>
         // Fallback to user secrets for development
         connectionString = builder.Configuration["ConnectionStrings:DefaultConnection"];
     }
-    options.UseSqlServer(connectionString);
+    
+    // Use SQLite if no connection string is provided (for local testing)
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        options.UseSqlite("Data Source=InteractiveMapGame.db");
+    }
+    else
+    {
+        options.UseSqlServer(connectionString);
+    }
 });
 
 // Add CORS
@@ -109,23 +118,52 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<MapGameDbContext>();
     try
     {
-        // Update InteractionLogs columns to nvarchar(max) if not already
-        // nvarchar(2000) has max_length = 4000, nvarchar(max) has max_length = -1
-        dbContext.Database.ExecuteSqlRaw(@"
-            IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('InteractionLogs') AND name = 'LLMPrompt' AND max_length = 4000)
-            BEGIN
-                ALTER TABLE [InteractionLogs] ALTER COLUMN [LLMPrompt] nvarchar(max) NULL;
-            END
-            IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('InteractionLogs') AND name = 'LLMResponse' AND max_length = 4000)
-            BEGIN
-                ALTER TABLE [InteractionLogs] ALTER COLUMN [LLMResponse] nvarchar(max) NULL;
-            END
-        ");
+        // Ensure database is created and migrations are applied
+        try
+        {
+            dbContext.Database.Migrate();
+            Console.WriteLine("Database migrations applied successfully.");
+        }
+        catch (Exception migrateEx)
+        {
+            // If migrations fail (e.g., for SQLite with SQL Server migrations), use EnsureCreated
+            Console.WriteLine($"Migration failed, using EnsureCreated: {migrateEx.Message}");
+            try
+            {
+                var created = dbContext.Database.EnsureCreated();
+                Console.WriteLine($"Database EnsureCreated: {created}");
+                if (created)
+                {
+                    Console.WriteLine("Database tables created successfully.");
+                }
+            }
+            catch (Exception ensureEx)
+            {
+                Console.WriteLine($"EnsureCreated failed: {ensureEx.Message}");
+            }
+        }
+        
+        // For SQL Server, update InteractionLogs columns to nvarchar(max) if not already
+        var connectionString = app.Configuration.GetConnectionString("DefaultConnection");
+        if (!string.IsNullOrEmpty(connectionString) && connectionString.Contains("Server="))
+        {
+            // SQL Server specific column updates
+            dbContext.Database.ExecuteSqlRaw(@"
+                IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('InteractionLogs') AND name = 'LLMPrompt' AND max_length = 4000)
+                BEGIN
+                    ALTER TABLE [InteractionLogs] ALTER COLUMN [LLMPrompt] nvarchar(max) NULL;
+                END
+                IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('InteractionLogs') AND name = 'LLMResponse' AND max_length = 4000)
+                BEGIN
+                    ALTER TABLE [InteractionLogs] ALTER COLUMN [LLMResponse] nvarchar(max) NULL;
+                END
+            ");
+        }
     }
     catch (Exception ex)
     {
         // Log but don't fail startup if column doesn't exist or update fails
-        Console.WriteLine($"Warning: Could not update database columns: {ex.Message}");
+        Console.WriteLine($"Warning: Could not update database: {ex.Message}");
     }
 }
 

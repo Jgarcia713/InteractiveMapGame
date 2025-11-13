@@ -136,3 +136,5 @@ Once you've verified everything works:
 2. New exhibits will appear on the public map (if `IsDiscoverable` is true)
 3. You can later add real-time map updates using SignalR or WebSockets
 
+
+
