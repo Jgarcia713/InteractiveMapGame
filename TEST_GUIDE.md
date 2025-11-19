@@ -9,9 +9,6 @@ If you don't have a database connection string configured, you need to set it up
 ```bash
 # Set your database connection string
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=YOUR_SERVER;Database=InteractiveMapGame;User Id=YOUR_USERNAME;Password=YOUR_PASSWORD;TrustServerCertificate=true;MultipleActiveResultSets=true"
-
-# Or if using SQLite for local testing:
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Data Source=InteractiveMapGame.db"
 ```
 
 **Note**: If you're using SQL Server, make sure your database exists and migrations are applied.

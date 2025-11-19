@@ -39,15 +39,12 @@ builder.Services.AddDbContext<MapGameDbContext>(options =>
         connectionString = builder.Configuration["ConnectionStrings:DefaultConnection"];
     }
     
-    // Use SQLite if no connection string is provided (for local testing)
     if (string.IsNullOrEmpty(connectionString))
     {
-        options.UseSqlite("Data Source=InteractiveMapGame.db");
+        throw new InvalidOperationException("Connection string 'DefaultConnection' is required. Please configure it in appsettings.json or user secrets.");
     }
-    else
-    {
-        options.UseSqlServer(connectionString);
-    }
+    
+    options.UseSqlServer(connectionString);
 });
 
 // Add CORS
@@ -71,6 +68,8 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "API for the Interactive Map Game with LLM integration and 360 video support"
     });
+    
+    // Swagger automatically handles IFormFile parameters for file uploads
 });
 
 var app = builder.Build();
@@ -126,28 +125,12 @@ using (var scope = app.Services.CreateScope())
         }
         catch (Exception migrateEx)
         {
-            // If migrations fail (e.g., for SQLite with SQL Server migrations), use EnsureCreated
-            Console.WriteLine($"Migration failed, using EnsureCreated: {migrateEx.Message}");
-            try
-            {
-                var created = dbContext.Database.EnsureCreated();
-                Console.WriteLine($"Database EnsureCreated: {created}");
-                if (created)
-                {
-                    Console.WriteLine("Database tables created successfully.");
-                }
-            }
-            catch (Exception ensureEx)
-            {
-                Console.WriteLine($"EnsureCreated failed: {ensureEx.Message}");
-            }
+            Console.WriteLine($"Warning: Migration failed: {migrateEx.Message}");
         }
         
-        // For SQL Server, update InteractionLogs columns to nvarchar(max) if not already
-        var connectionString = app.Configuration.GetConnectionString("DefaultConnection");
-        if (!string.IsNullOrEmpty(connectionString) && connectionString.Contains("Server="))
+        // Update InteractionLogs columns to nvarchar(max) if not already
+        try
         {
-            // SQL Server specific column updates
             dbContext.Database.ExecuteSqlRaw(@"
                 IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('InteractionLogs') AND name = 'LLMPrompt' AND max_length = 4000)
                 BEGIN
@@ -158,6 +141,11 @@ using (var scope = app.Services.CreateScope())
                     ALTER TABLE [InteractionLogs] ALTER COLUMN [LLMResponse] nvarchar(max) NULL;
                 END
             ");
+        }
+        catch (Exception sqlEx)
+        {
+            // Log but don't fail startup if column doesn't exist or update fails
+            Console.WriteLine($"Warning: Could not update InteractionLogs columns: {sqlEx.Message}");
         }
     }
     catch (Exception ex)

@@ -220,7 +220,7 @@ dotnet ef database update --force
 **Solution:** 
 - If you see "An admin already exists", just use the login page
 - Make sure the app is running
-- Check if database file exists: `ls -la *.db`
+- Verify database connection string is configured correctly in appsettings.json or user secrets
 
 ### Issue: Form doesn't submit
 **Solution:**
