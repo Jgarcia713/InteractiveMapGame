@@ -83,11 +83,12 @@ app.UseCors("AllowAll");
 // Enable static files
 app.UseDefaultFiles();
 
-// Serve static files including GLB/GLTF/KTX2 with proper content types
+// Serve static files including GLB/GLTF/KTX2/PLY with proper content types
 var staticFileProvider = new FileExtensionContentTypeProvider();
 staticFileProvider.Mappings[".glb"] = "model/gltf-binary";
 staticFileProvider.Mappings[".gltf"] = "model/gltf+json";
 staticFileProvider.Mappings[".ktx2"] = "image/ktx2";
+staticFileProvider.Mappings[".ply"] = "application/octet-stream"; // PLY files for Gaussian splats
 app.UseStaticFiles(new StaticFileOptions
 {
     ContentTypeProvider = staticFileProvider
