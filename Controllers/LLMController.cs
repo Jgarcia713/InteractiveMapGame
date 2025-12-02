@@ -428,7 +428,7 @@ namespace InteractiveMapGame.Controllers
         {
             if (contentType.ToLower() == "conversation")
             {
-                return "You are an expert conversational AI map guide. Use the GeneratedDescription field from the map object as your primary source of facts to answer the user's question, and be concise.";
+                return "You are an expert conversational map guide. You must use the provided CONTEXT as your primary source of facts. You may use your general knowledge to answer follow-up questions that are directly relevant to the CONTEXT, but do not search for new information. If the question is entirely unrelated to the exhibit, return the message: I am trained only to answer questions about the exhibit you selected. I cannot answer that request.";
             }
 
             var basePrompt = $"You are an expert aerospace historian and museum guide. You are helping visitors learn about {mapObject.Name}, a {mapObject.Type}";
