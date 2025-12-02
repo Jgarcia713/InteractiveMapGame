@@ -684,7 +684,7 @@
                 const data = await response.json();
                 displayGeneratedContent(data.content, contentType);
                 
-                showNotification('Content generated successfully!', 'success');
+                // showNotification('Content generated successfully!', 'success');
             } catch (error) {
                 console.error('Error generating content:', error);
                 const errorMsg = error.message || 'Error generating content';
