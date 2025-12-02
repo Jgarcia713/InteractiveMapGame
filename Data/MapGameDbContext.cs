@@ -10,8 +10,8 @@ namespace InteractiveMapGame.Data
         }
 
         public DbSet<MapObject> MapObjects { get; set; }
-        public DbSet<PlayerProgress> PlayerProgress { get; set; }
         public DbSet<InteractionLog> InteractionLogs { get; set; }
+        public DbSet<Admin> Admins { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -39,20 +39,6 @@ namespace InteractiveMapGame.Data
                 entity.HasIndex(e => new { e.X, e.Y, e.Z });
             });
 
-            // Configure PlayerProgress
-            modelBuilder.Entity<PlayerProgress>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.PlayerId).IsRequired().HasMaxLength(64);
-                entity.Property(e => e.SessionId).IsRequired().HasMaxLength(64);
-                entity.Property(e => e.UnlockedObjects).HasColumnType("nvarchar(max)");
-                entity.Property(e => e.CompletedQuests).HasColumnType("nvarchar(max)");
-                entity.Property(e => e.PlayerPreferences).HasColumnType("nvarchar(max)");
-                
-                entity.HasIndex(e => e.PlayerId);
-                entity.HasIndex(e => e.SessionId);
-            });
-
             // Configure InteractionLog
             modelBuilder.Entity<InteractionLog>(entity =>
             {
@@ -60,12 +46,23 @@ namespace InteractiveMapGame.Data
                 entity.Property(e => e.PlayerId).IsRequired().HasMaxLength(64);
                 entity.Property(e => e.InteractionType).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.InteractionData).HasMaxLength(1000);
-                entity.Property(e => e.LLMPrompt).HasMaxLength(2000);
-                entity.Property(e => e.LLMResponse).HasMaxLength(2000);
+                entity.Property(e => e.LLMPrompt).HasColumnType("nvarchar(max)");
+                entity.Property(e => e.LLMResponse).HasColumnType("nvarchar(max)");
                 
                 entity.HasIndex(e => e.PlayerId);
                 entity.HasIndex(e => e.MapObjectId);
                 entity.HasIndex(e => e.Timestamp);
+            });
+
+            // Configure Admin
+            modelBuilder.Entity<Admin>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Username).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(256);
+                entity.Property(e => e.Email).HasMaxLength(200);
+                
+                entity.HasIndex(e => e.Username).IsUnique();
             });
         }
     }

@@ -4,6 +4,7 @@ using InteractiveMapGame.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InteractiveMapGame.Migrations
 {
     [DbContext(typeof(MapGameDbContext))]
-    partial class MapGameDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251104165004_AddAdminTable")]
+    partial class AddAdminTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -82,10 +85,12 @@ namespace InteractiveMapGame.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("LLMPrompt")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<string>("LLMResponse")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<int?>("LLMTokens")
                         .HasColumnType("int");
@@ -224,6 +229,75 @@ namespace InteractiveMapGame.Migrations
                     b.HasIndex("X", "Y", "Z");
 
                     b.ToTable("MapObjects");
+                });
+
+            modelBuilder.Entity("InteractiveMapGame.Models.PlayerProgress", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CompletedQuests")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CurrentLevel")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DiscoveredObjects")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("LastActive")
+                        .HasColumnType("datetime2");
+
+                    b.Property<double>("LastX")
+                        .HasColumnType("float");
+
+                    b.Property<double>("LastY")
+                        .HasColumnType("float");
+
+                    b.Property<double>("LastZ")
+                        .HasColumnType("float");
+
+                    b.Property<string>("PlayerId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("PlayerPreferences")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SessionId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("TimeSpent")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalExperience")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalInteractions")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UnlockedObjects")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("VideosWatched")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayerId");
+
+                    b.HasIndex("SessionId");
+
+                    b.ToTable("PlayerProgress");
                 });
 #pragma warning restore 612, 618
         }
