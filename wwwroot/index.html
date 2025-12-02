@@ -31,52 +31,6 @@
             overflow: hidden;
         }
 
-        .map-canvas {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            cursor: grab;
-            z-index: 1; /* above webgl */
-        }
-
-        .map-canvas:active {
-            cursor: grabbing;
-        }
-
-        .map-object {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 3px solid #00ff88;
-            background: radial-gradient(circle, rgba(0,255,136,0.3) 0%, rgba(0,255,136,0.1) 70%, transparent 100%);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            box-shadow: 0 0 20px rgba(0,255,136,0.5);
-            z-index: 2; /* above map canvas */
-        }
-
-        .map-object:hover {
-            transform: scale(1.2);
-            box-shadow: 0 0 30px rgba(0,255,136,0.8);
-        }
-
-        .map-object.discovered {
-            border-color: #ff6b35;
-            background: radial-gradient(circle, rgba(255,107,53,0.3) 0%, rgba(255,107,53,0.1) 70%, transparent 100%);
-            box-shadow: 0 0 20px rgba(255,107,53,0.5);
-        }
-
-        .map-object.unlocked {
-            border-color: #ffd700;
-            background: radial-gradient(circle, rgba(255,215,0,0.3) 0%, rgba(255,215,0,0.1) 70%, transparent 100%);
-            box-shadow: 0 0 20px rgba(255,215,0,0.5);
-        }
-
         .sidebar {
             width: 350px;
             background: rgba(0,0,0,0.8);
@@ -91,12 +45,6 @@
             border-radius: 10px;
             padding: 15px;
             margin-bottom: 20px;
-        }
-
-        .toolbar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
         }
 
         .stat-item {
@@ -367,8 +315,9 @@
     <script type="importmap">
     {
         "imports": {
-            "three": "https://unpkg.com/three@0.159.0/build/three.module.js",
-            "three/examples/jsm/": "https://unpkg.com/three@0.159.0/examples/jsm/"
+            "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.178.0/three.module.js",
+            "three/examples/jsm/": "https://unpkg.com/three@0.178.0/examples/jsm/",
+            "@sparkjsdev/spark": "https://sparkjs.dev/releases/spark/0.1.10/spark.module.js"
         }
     }
     </script>
@@ -376,15 +325,10 @@
 <body>
     <div class="game-container">
         <div class="map-container">
-            <div class="map-canvas" id="mapCanvas">
-                <!-- Map objects will be dynamically added here -->
-            </div>
+            <!-- 3D WebGL scene attaches here -->
         </div>
 
         <div class="sidebar">
-            <div class="toolbar">
-                <button class="btn btn-primary" id="toggleMarkersBtn" onclick="toggleMarkers()">Hide Markers</button>
-            </div>
             <div class="player-stats">
                 <h3>Player Stats</h3>
                 <div class="stat-item">
@@ -458,12 +402,10 @@
             interactions: 0
         };
 
-        // Initialize the game
+        // Initialize the experience
         async function initGame() {
             await loadMapObjects();
-            await loadPlayerProgress();
-            renderMap();
-            updatePlayerStats();
+            // Player progress UI and 2D markers have been removed; stats are no longer updated here.
         }
 
         // Generate unique player ID
@@ -480,75 +422,6 @@
                 console.error('Error loading map objects:', error);
                 showNotification('Error loading map objects', 'error');
             }
-        }
-
-        // Load player progress
-        async function loadPlayerProgress() {
-            // In a real implementation, this would load from the database
-            // For now, we'll use localStorage
-            const saved = localStorage.getItem('playerProgress');
-            if (saved) {
-                playerStats = JSON.parse(saved);
-            }
-        }
-
-        // Save player progress
-        function savePlayerProgress() {
-            localStorage.setItem('playerProgress', JSON.stringify(playerStats));
-        }
-
-        // Render the map
-        function renderMap() {
-            const canvas = document.getElementById('mapCanvas');
-            canvas.innerHTML = '';
-
-            mapObjects.forEach(obj => {
-                const element = document.createElement('div');
-                element.className = 'map-object';
-                element.style.left = obj.x + 'px';
-                element.style.top = obj.y + 'px';
-                element.innerHTML = getObjectIcon(obj.type);
-                element.title = obj.name;
-                
-                if (obj.isUnlocked) {
-                    element.classList.add('unlocked');
-                } else if (obj.isDiscoverable) {
-                    element.classList.add('discovered');
-                }
-
-                element.onclick = () => selectObject(obj);
-                canvas.appendChild(element);
-            });
-        }
-
-        // Toggle 2D markers visibility and allow interacting with 3D map
-        function toggleMarkers() {
-            const canvas = document.getElementById('mapCanvas');
-            const btn = document.getElementById('toggleMarkersBtn');
-            const hidden = canvas.style.display === 'none';
-            if (hidden) {
-                canvas.style.display = '';
-                btn.textContent = 'Hide Markers';
-                // restore pointer events to markers layer
-                canvas.style.pointerEvents = '';
-            } else {
-                canvas.style.display = 'none';
-                btn.textContent = 'Show Markers';
-            }
-        }
-
-        // Get icon for object type
-        function getObjectIcon(type) {
-            const icons = {
-                'Aircraft': '✈️',
-                'Spacecraft': '🚀',
-                'Satellite': '🛰️',
-                'Helicopter': '🚁',
-                'Rocket': '🚀',
-                'Museum': '🏛️',
-                'default': '⭐'
-            };
-            return icons[type] || icons.default;
         }
 
         // Select an object
@@ -772,8 +645,9 @@
         import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
         import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
         import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-        import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
-        import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+        import { SplatMesh } from '@sparkjsdev/spark';
+        
+        // SplatMesh is imported as ES module, ready to use
 
         const container = document.querySelector('.map-container');
         if (!container) {
@@ -798,22 +672,10 @@
             dir.position.set(100, 200, 100);
             scene.add(dir);
 
-            // Postprocessing composer: render -> hoverOutline -> mild bloom (hover only)
+            // Postprocessing composer: simple render pass (no bloom)
             const composer = new EffectComposer(renderer);
             const renderPass = new RenderPass(scene, camera);
             composer.addPass(renderPass);
-            // Stronger outline for hovered exhibit
-            const hoverOutlinePass = new OutlinePass(new THREE.Vector2(container.clientWidth, container.clientHeight), scene, camera);
-            hoverOutlinePass.edgeStrength = 3.0;
-            hoverOutlinePass.edgeGlow = 0.0;
-            hoverOutlinePass.edgeThickness = 1.6;
-            hoverOutlinePass.visibleEdgeColor.set(0x00ff88);
-            hoverOutlinePass.hiddenEdgeColor.set(0x004422);
-            composer.addPass(hoverOutlinePass);
-            const BASE_BLOOM_STRENGTH = 0.0;
-            const HOVER_BLOOM_STRENGTH = 0.45;
-            const bloomPass = new UnrealBloomPass(new THREE.Vector2(container.clientWidth, container.clientHeight), BASE_BLOOM_STRENGTH, 0.6, 0.85);
-            composer.addPass(bloomPass);
 
             const gltfLoader = new GLTFLoader();
             const dracoLoader = new DRACOLoader();
@@ -821,16 +683,36 @@
             gltfLoader.setDRACOLoader(dracoLoader);
 
             let terrain = null;
-            let planeTemplate = null;
             const exhibitGroups = [];
             const raycaster = new THREE.Raycaster();
             const mouse = new THREE.Vector2();
             let hoveredGroup = null;
+            // Splat class is now imported as ES module
+            const loadedSplats = [];
+            const SPLAT_FILES = [
+                'sam3d-splat.ply',
+                'sam3d-splat(1).ply',
+                'sam3d-splat(2).ply',
+                'sam3d-splat(3).ply',
+                'sam3d-splat(4).ply',
+                'sam3d-splat(5).ply',
+                'sam3d-splat(6).ply',
+                'sam3d-splat(7).ply'
+            ];
 
             // Load terrain first
-            gltfLoader.load('/assets/mansion_map.glb', (gltf) => {
+            gltfLoader.load('/assets/low_poly_dirt_ground.glb', (gltf) => {
                 terrain = gltf.scene;
                 scene.add(terrain);
+
+                // Warm up the terrain tint toward a reddish brown
+                const tintColor = new THREE.Color(0xf00602).convertSRGBToLinear();
+                terrain.traverse((child) => {
+                    if (child.isMesh && child.material && child.material.color) {
+                        child.material.color.lerp(tintColor, 0.7);
+                        child.material.needsUpdate = true;
+                    }
+                });
 
                 const box = new THREE.Box3().setFromObject(terrain);
                 const size = box.getSize(new THREE.Vector3());
@@ -842,158 +724,193 @@
                 camera.position.set(center.x - fitDist * 0.7, center.y + fitDist * 0.5, center.z + fitDist * 0.7);
                 controls.update();
 
-                // After terrain, load plane template
-                loadPlaneTemplate();
+                // After terrain, load splat models
+                loadSplatModels();
             }, (evt) => {
                 if (evt.lengthComputable) {
                     const pct = (evt.loaded / evt.total * 100).toFixed(1);
-                    console.log(`Loading model: ${pct}%`);
+                    console.log(`Loading terrain: ${pct}%`);
                 } else {
-                    console.log(`Loading model: ${evt.loaded} bytes`);
+                    console.log(`Loading terrain: ${evt.loaded} bytes`);
                 }
             }, (err) => {
-                console.error('Failed to load GLB:', err);
+                console.error('Failed to load terrain GLB:', err);
             });
 
-            function loadPlaneTemplate() {
-                gltfLoader.load('/assets/plane.glb', (gltf) => {
-                    planeTemplate = gltf.scene;
-                    // Normalize template scale to a manageable size
-                    const bbox = new THREE.Box3().setFromObject(planeTemplate);
-                    const sz = bbox.getSize(new THREE.Vector3());
-                    const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
-                    const targetSize = 10; // meters
-                    const s = targetSize / maxDim;
-                    planeTemplate.scale.setScalar(s);
-                    placeExhibitsIfReady();
-                }, undefined, (err) => {
-                    console.error('Failed to load plane.glb:', err);
+            async function loadSplatModels() {
+                if (!terrain) return;
+                
+                // Check if SplatMesh is available
+                if (!SplatMesh) {
+                    console.error('SplatMesh not available. Check console for import errors.');
+                    return;
+                }
+                
+                console.log('Using SplatMesh from @sparkjsdev/spark');
+                
+                const tBox = new THREE.Box3().setFromObject(terrain);
+                const tMin = tBox.min;
+                const tMax = tBox.max;
+                const tCenter = tBox.getCenter(new THREE.Vector3());
+                
+                // Arrange 8 planes in 4 columns (across the runway) by 2 rows (along the runway),
+                // with an alternating pattern: outer lanes, then inner lanes, repeating.
+                const columns = 4;
+                const rows = 2;
+                const spacingZ = (tMax.z - tMin.z) * 0.25;
+                const spacingX = (tMax.x - tMin.x) * 0.5;
+                const startZ = tCenter.z - (columns - 1) * spacingZ * 0.5;
+                const startX = tCenter.x - (rows - 1) * spacingX * 0.5;
+                const columnOffsets = [-0.25, -0.08, 0.08, 0.25]; // relative positions across the runway
+                
+                let loadedCount = 0;
+                
+                for (let i = 0; i < SPLAT_FILES.length; i++) {
+                    const columnIndex = i % columns;
+                    const rowIndex = Math.floor(i / columns) % rows;
+                    const worldZ = startZ + columnIndex * spacingZ;
+                    const worldX = startX + rowIndex * spacingX;
+                    
+                    try {
+                        const splatUrl = `/assets/PimaAirandSpace3DModels/${SPLAT_FILES[i]}`;
+                        
+                        // Use Spark's SplatMesh - it loads from URL automatically
+                        const splat = new SplatMesh({ url: splatUrl });
+                        
+                        // Drop to terrain surface
+                        const worldY = dropToTerrain(worldX, worldZ);
+                        
+                        // Create group for interaction tracking and transforms
+                        const group = new THREE.Group();
+                        group.add(splat);
+
+                        // Scale up planes so they read clearly against the terrain
+                        const planeScale = 8.0;
+                        group.scale.setScalar(planeScale);
+                        // Remember base scale so hover effects can restore it
+                        group.userData.baseScale = planeScale;
+
+                        const heightOffset = planeScale * 0.2; // lift planes above terrain
+                        group.position.set(worldX, worldY + heightOffset, worldZ);
+                        
+                        // Rotate so planes are upright and face down the runway (positive X direction).
+                        group.rotation.x = -Math.PI / 2;   // keep them upright
+                        group.rotation.z = Math.PI / 2;    // yaw to face down the long axis
+                        
+                        group.userData.mapObject = { id: i + 1, name: `Plane ${i + 1}` };
+                        group.userData.splatMesh = splat;
+                        
+                        scene.add(group);
+                        exhibitGroups.push(group);
+                        loadedSplats.push(splat);
+                        
+                        loadedCount++;
+                        console.log(`Loaded splat ${i + 1}/${SPLAT_FILES.length}: ${SPLAT_FILES[i]}`);
+                        
+                        if (loadedCount === SPLAT_FILES.length) {
+                            console.log('All splat models loaded');
+                            setupInteractionHandlers();
+                        }
+                    } catch (err) {
+                        console.error(`Failed to load ${SPLAT_FILES[i]}:`, err);
+                    }
+                }
+            }
+            
+            function dropToTerrain(x, z) {
+                if (!terrain) return 0;
+                const tBox = new THREE.Box3().setFromObject(terrain);
+                const origin = new THREE.Vector3(x, tBox.max.y + 1000, z);
+                const direction = new THREE.Vector3(0, -1, 0);
+                raycaster.set(origin, direction);
+                const hits = raycaster.intersectObject(terrain, true);
+                if (hits.length) return hits[0].point.y;
+                return tBox.min.y;
+            }
+            
+            // Apply or clear hover visual state (scale + color) on a given plane group
+            function setHoverState(group, isHovered) {
+                if (!group) return;
+                
+                // Scale
+                const baseScale = group.userData.baseScale || 1;
+                group.scale.setScalar(isHovered ? baseScale * 1.1 : baseScale);
+
+                // Light-blue tint on hovered planes to give a colored bloom
+                const hoverTint = new THREE.Color(0x9ad7ff).convertSRGBToLinear();
+                group.traverse((n) => {
+                    const mat = n.material;
+                    if (!mat || !mat.color) return;
+
+                    if (isHovered) {
+                        if (!n.userData.baseColor) {
+                            n.userData.baseColor = mat.color.clone();
+                        }
+                        mat.color.copy(n.userData.baseColor).lerp(hoverTint, 0.6);
+                        mat.needsUpdate = true;
+                    } else if (n.userData.baseColor) {
+                        mat.color.copy(n.userData.baseColor);
+                        mat.needsUpdate = true;
+                    }
                 });
             }
 
-            function placeExhibitsIfReady() {
-                if (!terrain || !planeTemplate) return;
-                const getMapObjects = window.getMapObjects;
-                if (!getMapObjects) return;
-                const objects = getMapObjects();
-                if (!objects || !objects.length) return;
-
-                // Compute 2D data extents
-                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-                for (const o of objects) {
-                    if (typeof o.x !== 'number' || typeof o.y !== 'number') continue;
-                    if (o.x < minX) minX = o.x; if (o.x > maxX) maxX = o.x;
-                    if (o.y < minY) minY = o.y; if (o.y > maxY) maxY = o.y;
-                }
-                if (!isFinite(minX) || !isFinite(maxX) || minX === maxX || minY === maxY) {
-                    console.warn('Invalid object coordinate extents; skipping 3D placement');
-                    return;
-                }
-
-                const tBox = new THREE.Box3().setFromObject(terrain);
-                const tMin = tBox.min, tMax = tBox.max;
-
-                const mapRange = (v, a1, a2, b1, b2) => b1 + (b2 - b1) * ((v - a1) / (a2 - a1));
-
-                // Helper to drop a point to terrain surface using raycast
-                const dropToTerrain = (x, z) => {
-                    const origin = new THREE.Vector3(x, tMax.y + 1000, z);
-                    const direction = new THREE.Vector3(0, -1, 0);
-                    raycaster.set(origin, direction);
-                    const hits = raycaster.intersectObject(terrain, true);
-                    if (hits.length) return hits[0].point.y;
-                    return tBox.min.y;
-                };
-
-                // Clear previous
-                for (const g of exhibitGroups) scene.remove(g);
-                exhibitGroups.length = 0;
-
-                // Place
-                for (const o of objects) {
-                    if (!o || typeof o.x !== 'number' || typeof o.y !== 'number') continue;
-                    const worldX = mapRange(o.x, minX, maxX, tMin.x, tMax.x);
-                    const worldZ = mapRange(o.y, minY, maxY, tMin.z, tMax.z);
-                    const worldY = dropToTerrain(worldX, worldZ);
-
-                    const inst = planeTemplate.clone(true);
-                    const group = new THREE.Group();
-                    group.add(inst);
-                    group.position.set(worldX, worldY + 0.5, worldZ);
-                    group.userData.mapObject = o;
-                    // Orient upright
-                    group.rotation.y = Math.random() * Math.PI * 2;
-
-                    // Keep original materials; no base emissive tint
-                    scene.add(group);
-                    exhibitGroups.push(group);
-                }
-
-                // Enable picking
+            function setupInteractionHandlers() {
+                // Enable picking for splat models
                 renderer.domElement.addEventListener('pointerdown', (ev) => {
                     const rect = renderer.domElement.getBoundingClientRect();
                     mouse.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
                     mouse.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
                     raycaster.setFromCamera(mouse, camera);
-                    const meshes = [];
-                    for (const g of exhibitGroups) g.traverse((n) => { if ((n).isMesh) meshes.push(n); });
-                    const hits = raycaster.intersectObjects(meshes, true);
+                    
+                    // Raycast against splat groups (splats are Points objects, not Meshes)
+                    const hits = raycaster.intersectObjects(exhibitGroups, true);
                     if (hits.length) {
                         let node = hits[0].object;
-                        while (node && !node.userData.mapObject) node = node.parent;
+                        while (node && !node.userData.mapObject) {
+                            node = node.parent;
+                        }
                         if (node && node.userData.mapObject && window.selectObject) {
                             window.selectObject(node.userData.mapObject);
                         }
                     }
                 });
-
-                // Hover highlight (stronger emissive + slight scale)
+                
+                // Hover highlight
                 renderer.domElement.addEventListener('pointermove', (ev) => {
                     const rect = renderer.domElement.getBoundingClientRect();
                     mouse.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
                     mouse.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
                     raycaster.setFromCamera(mouse, camera);
-                    const meshes = [];
-                    for (const g of exhibitGroups) g.traverse((n) => { if ((n).isMesh) meshes.push(n); });
-                    const hits = raycaster.intersectObjects(meshes, true);
+                    
+                    const hits = raycaster.intersectObjects(exhibitGroups, true);
                     let newHover = null;
                     if (hits.length) {
                         let n = hits[0].object;
                         while (n && !n.userData.mapObject) n = n.parent;
-                        if (n && n.userData.mapObject) newHover = n;
+                        if (n && n.userData.mapObject) {
+                            newHover = n;
+                        }
                     }
+                    
                     if (hoveredGroup && hoveredGroup !== newHover) {
-                        hoveredGroup.scale.set(1, 1, 1);
+                        // Restore previous group's visual state
+                        setHoverState(hoveredGroup, false);
                     }
                     hoveredGroup = newHover;
                     if (hoveredGroup) {
-                        hoveredGroup.scale.set(1.05, 1.05, 1.05);
-                        const sel = [];
-                        hoveredGroup.traverse((n)=>{ if ((n).isMesh) sel.push(n); });
-                        hoverOutlinePass.selectedObjects = sel;
-                        bloomPass.strength = HOVER_BLOOM_STRENGTH;
-                    } else {
-                        hoverOutlinePass.selectedObjects = [];
-                        bloomPass.strength = BASE_BLOOM_STRENGTH;
+                        // Apply hover state only to the current plane
+                        setHoverState(hoveredGroup, true);
                     }
                 });
             }
 
-            // Try to place exhibits again after the page’s data loads
-            window.addEventListener('load', () => setTimeout(placeExhibitsIfReady, 0));
-            // Also poll briefly in case mapObjects arrive slightly later
-            let tries = 0;
-            const timer = setInterval(() => {
-                placeExhibitsIfReady();
-                if (++tries > 20) clearInterval(timer);
-            }, 250);
 
             function onResize() {
                 renderer.setSize(container.clientWidth, container.clientHeight);
                 camera.aspect = container.clientWidth / container.clientHeight;
                 camera.updateProjectionMatrix();
                 if (composer) composer.setSize(container.clientWidth, container.clientHeight);
-                hoverOutlinePass.setSize(container.clientWidth, container.clientHeight);
             }
             window.addEventListener('resize', onResize);
 
