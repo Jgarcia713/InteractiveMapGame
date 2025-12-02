@@ -38,6 +38,12 @@ builder.Services.AddDbContext<MapGameDbContext>(options =>
         // Fallback to user secrets for development
         connectionString = builder.Configuration["ConnectionStrings:DefaultConnection"];
     }
+    
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        throw new InvalidOperationException("Connection string 'DefaultConnection' is required. Please configure it in appsettings.json or user secrets.");
+    }
+    
     options.UseSqlServer(connectionString);
 });
 
@@ -62,6 +68,8 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "API for the Interactive Map Game with LLM integration and 360 video support"
     });
+    
+    // Swagger automatically handles IFormFile parameters for file uploads
 });
 
 var app = builder.Build();
@@ -110,23 +118,41 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<MapGameDbContext>();
     try
     {
+        // Ensure database is created and migrations are applied
+        try
+        {
+            dbContext.Database.Migrate();
+            Console.WriteLine("Database migrations applied successfully.");
+        }
+        catch (Exception migrateEx)
+        {
+            Console.WriteLine($"Warning: Migration failed: {migrateEx.Message}");
+        }
+        
         // Update InteractionLogs columns to nvarchar(max) if not already
-        // nvarchar(2000) has max_length = 4000, nvarchar(max) has max_length = -1
-        dbContext.Database.ExecuteSqlRaw(@"
-            IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('InteractionLogs') AND name = 'LLMPrompt' AND max_length = 4000)
-            BEGIN
-                ALTER TABLE [InteractionLogs] ALTER COLUMN [LLMPrompt] nvarchar(max) NULL;
-            END
-            IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('InteractionLogs') AND name = 'LLMResponse' AND max_length = 4000)
-            BEGIN
-                ALTER TABLE [InteractionLogs] ALTER COLUMN [LLMResponse] nvarchar(max) NULL;
-            END
-        ");
+        try
+        {
+            dbContext.Database.ExecuteSqlRaw(@"
+                IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('InteractionLogs') AND name = 'LLMPrompt' AND max_length = 4000)
+                BEGIN
+                    ALTER TABLE [InteractionLogs] ALTER COLUMN [LLMPrompt] nvarchar(max) NULL;
+                END
+                IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('InteractionLogs') AND name = 'LLMResponse' AND max_length = 4000)
+                BEGIN
+                    ALTER TABLE [InteractionLogs] ALTER COLUMN [LLMResponse] nvarchar(max) NULL;
+                END
+            ");
+        }
+        catch (Exception sqlEx)
+        {
+            // Log but don't fail startup if column doesn't exist or update fails
+            Console.WriteLine($"Warning: Could not update InteractionLogs columns: {sqlEx.Message}");
+        }
     }
     catch (Exception ex)
     {
         // Log but don't fail startup if column doesn't exist or update fails
-        Console.WriteLine($"Warning: Could not update database columns: {ex.Message}");
+        Console.WriteLine($"Warning: Could not update database: {ex.Message}");
     }
 }
 

@@ -306,6 +306,54 @@
         .success-message.show {
             display: block;
         }
+
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+
+        .tab-button.active {
+            color: #00ff88 !important;
+            border-bottom-color: #00ff88 !important;
+        }
+
+        .tab-button:hover {
+            color: #00ff88;
+        }
+
+        .tab-content {
+            display: block;
+        }
+
+        .exhibit-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border-left: 3px solid #00ff88;
+        }
+
+        .exhibit-info {
+            flex: 1;
+        }
+
+        .exhibit-info .exhibit-name {
+            font-weight: bold;
+            color: #00ff88;
+            margin-bottom: 5px;
+        }
+
+        .exhibit-info .exhibit-details {
+            font-size: 0.85em;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .exhibit-actions {
+            display: flex;
+            gap: 10px;
+        }
     </style>
 </head>
 <body>
@@ -359,10 +407,6 @@
                         <div class="stat-value" id="statObjects">-</div>
                     </div>
                     <div class="stat-card">
-                        <h3>Total Players</h3>
-                        <div class="stat-value" id="statPlayers">-</div>
-                    </div>
-                    <div class="stat-card">
                         <h3>Total Interactions</h3>
                         <div class="stat-value" id="statInteractions">-</div>
                     </div>
@@ -383,9 +427,146 @@
 
             <!-- Content Management Page -->
             <div id="page-content" class="page-content" style="display: none;">
-                <div class="placeholder-content">
-                    <h3>Content Management</h3>
-                    <p>Content management interface coming soon...</p>
+                <div class="admin-section">
+                    <h3>Manage Exhibits (Map Objects)</h3>
+                    
+                    <!-- Tabs for Single Add vs Bulk Upload -->
+                    <div style="margin-bottom: 20px; border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
+                        <button class="tab-button active" data-tab="single" style="background: none; border: none; color: rgba(255, 255, 255, 0.7); padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; margin-right: 10px;">
+                            📝 Add Single Exhibit
+                        </button>
+                        <button class="tab-button" data-tab="bulk" style="background: none; border: none; color: rgba(255, 255, 255, 0.7); padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent;">
+                            📊 Bulk Upload (CSV)
+                        </button>
+                    </div>
+
+                    <!-- Single Add Form -->
+                    <div id="single-form" class="tab-content" style="background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 20px;">
+                        <h4 style="margin-bottom: 20px; color: #00ff88;">Add New Exhibit</h4>
+                        <form id="createMapObjectForm">
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                                <div class="form-group">
+                                    <label for="mapObjectName">Name <span style="color: #ff6b35;">*</span></label>
+                                    <input type="text" id="mapObjectName" name="name" required maxlength="200">
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectType">Type <span style="color: #ff6b35;">*</span></label>
+                                    <input type="text" id="mapObjectType" name="type" required maxlength="100" placeholder="e.g., Aircraft, Spacecraft, Museum">
+                                </div>
+                                <div class="form-group" style="grid-column: span 2;">
+                                    <label for="mapObjectDescription">Description</label>
+                                    <textarea id="mapObjectDescription" name="description" rows="3" style="width: 100%; padding: 10px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 5px; background: rgba(0, 0, 0, 0.3); color: white; font-family: inherit;" maxlength="1000"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectCategory">Category</label>
+                                    <input type="text" id="mapObjectCategory" name="category" maxlength="100" placeholder="e.g., Fighter, Bomber, Satellite">
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectEra">Era</label>
+                                    <input type="text" id="mapObjectEra" name="era" maxlength="100" placeholder="e.g., 1960s, Modern">
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectManufacturer">Manufacturer</label>
+                                    <input type="text" id="mapObjectManufacturer" name="manufacturer" maxlength="100">
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectFirstFlight">First Flight</label>
+                                    <input type="date" id="mapObjectFirstFlight" name="firstFlight">
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectStatus">Status</label>
+                                    <input type="text" id="mapObjectStatus" name="status" maxlength="50" placeholder="e.g., Active, Retired">
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectX">X Coordinate <span style="color: #ff6b35;">*</span></label>
+                                    <input type="number" id="mapObjectX" name="x" step="0.01" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectY">Y Coordinate <span style="color: #ff6b35;">*</span></label>
+                                    <input type="number" id="mapObjectY" name="y" step="0.01" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectZ">Z Coordinate</label>
+                                    <input type="number" id="mapObjectZ" name="z" step="0.01" value="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectImageUrl">Image URL</label>
+                                    <input type="url" id="mapObjectImageUrl" name="imageUrl" maxlength="200">
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectModelUrl">3D Model URL</label>
+                                    <input type="url" id="mapObjectModelUrl" name="modelUrl" maxlength="200">
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectVideo360Url">360° Video URL</label>
+                                    <input type="url" id="mapObjectVideo360Url" name="video360Url" maxlength="200">
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectIsInteractive">
+                                        <input type="checkbox" id="mapObjectIsInteractive" name="isInteractive" checked> Interactive
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectIsDiscoverable">
+                                        <input type="checkbox" id="mapObjectIsDiscoverable" name="isDiscoverable" checked> Discoverable
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectIsUnlocked">
+                                        <input type="checkbox" id="mapObjectIsUnlocked" name="isUnlocked"> Unlocked
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectExperienceValue">Experience Value</label>
+                                    <input type="number" id="mapObjectExperienceValue" name="experienceValue" value="0" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapObjectDifficultyLevel">Difficulty Level</label>
+                                    <input type="number" id="mapObjectDifficultyLevel" name="difficultyLevel" value="1" min="1" max="5">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="margin-top: 20px;">Create Exhibit</button>
+                        </form>
+                    </div>
+
+                    <!-- Bulk Upload Form -->
+                    <div id="bulk-form" class="tab-content" style="display: none; background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 20px;">
+                        <h4 style="margin-bottom: 20px; color: #00ff88;">Bulk Upload Exhibits from CSV</h4>
+                        <div style="background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                            <h5 style="margin-bottom: 10px; color: #00ff88;">CSV Format Requirements:</h5>
+                            <p style="font-size: 0.9em; color: rgba(255, 255, 255, 0.8); margin-bottom: 10px;">
+                                Your CSV file should have the following columns (in order):
+                            </p>
+                            <code style="display: block; background: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; font-size: 0.85em; color: #00ff88; margin-bottom: 10px;">
+                                Name,Type,Description,Category,Era,Manufacturer,FirstFlight,Status,X,Y,Z,ImageUrl,ModelUrl,Video360Url,IsInteractive,IsDiscoverable,IsUnlocked,ExperienceValue,DifficultyLevel
+                            </code>
+                            <p style="font-size: 0.85em; color: rgba(255, 255, 255, 0.7);">
+                                <strong>Required fields:</strong> Name, Type, X, Y<br>
+                                <strong>Optional fields:</strong> All others can be left empty<br>
+                                <strong>Date format:</strong> YYYY-MM-DD (e.g., 1969-07-16)<br>
+                                <strong>Boolean values:</strong> true/false (for IsInteractive, IsDiscoverable, IsUnlocked)
+                            </p>
+                            <a href="#" id="downloadTemplate" style="color: #00ff88; text-decoration: underline; font-size: 0.9em;">Download CSV Template</a>
+                        </div>
+                        <form id="bulkUploadForm" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label for="csvFile">Select CSV File</label>
+                                <input type="file" id="csvFile" name="file" accept=".csv" required style="width: 100%; padding: 10px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 5px; background: rgba(0, 0, 0, 0.3); color: white;">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Upload CSV</button>
+                        </form>
+                        <div id="uploadProgress" style="display: none; margin-top: 20px; padding: 15px; background: rgba(0, 255, 136, 0.1); border-radius: 8px;">
+                            <p style="color: #00ff88;">Uploading and processing CSV file...</p>
+                        </div>
+                    </div>
+
+                    <!-- Existing Exhibits List -->
+                    <div style="margin-top: 30px;">
+                        <h4 style="margin-bottom: 20px; color: #00ff88;">Existing Exhibits</h4>
+                        <div id="exhibitsList" style="background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 20px;">
+                            <p>Loading exhibits...</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -471,7 +652,6 @@
 
                 const data = await response.json();
                 document.getElementById('statObjects').textContent = data.totalObjects || 0;
-                document.getElementById('statPlayers').textContent = data.totalPlayers || 0;
                 document.getElementById('statInteractions').textContent = data.totalInteractions || 0;
                 document.getElementById('statAdmins').textContent = data.totalAdmins || 0;
             } catch (error) {
@@ -550,6 +730,8 @@
             // Load data for specific pages
             if (pageName === 'admins') {
                 loadAdmins();
+            } else if (pageName === 'content') {
+                loadExhibits();
             }
         }
 
@@ -683,6 +865,218 @@
             successDiv.classList.add('show');
             setTimeout(() => successDiv.classList.remove('show'), 5000);
         }
+
+        // Tab switching for content management
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tab = button.getAttribute('data-tab');
+                
+                // Update active state
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Show/hide tab content
+                document.getElementById('single-form').style.display = tab === 'single' ? 'block' : 'none';
+                document.getElementById('bulk-form').style.display = tab === 'bulk' ? 'block' : 'none';
+            });
+        });
+
+        // Create single map object
+        document.getElementById('createMapObjectForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const mapObject = {
+                name: formData.get('name'),
+                type: formData.get('type'),
+                description: formData.get('description') || null,
+                category: formData.get('category') || null,
+                era: formData.get('era') || null,
+                manufacturer: formData.get('manufacturer') || null,
+                firstFlight: formData.get('firstFlight') || null,
+                status: formData.get('status') || null,
+                x: parseFloat(formData.get('x')),
+                y: parseFloat(formData.get('y')),
+                z: parseFloat(formData.get('z')) || 0,
+                imageUrl: formData.get('imageUrl') || null,
+                modelUrl: formData.get('modelUrl') || null,
+                video360Url: formData.get('video360Url') || null,
+                isInteractive: document.getElementById('mapObjectIsInteractive').checked,
+                isDiscoverable: document.getElementById('mapObjectIsDiscoverable').checked,
+                isUnlocked: document.getElementById('mapObjectIsUnlocked').checked,
+                experienceValue: parseInt(formData.get('experienceValue')) || 0,
+                difficultyLevel: parseInt(formData.get('difficultyLevel')) || 1
+            };
+
+            try {
+                const response = await fetch('/api/MapObjectAdmin/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(mapObject)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showSuccess('Exhibit created successfully!');
+                    document.getElementById('createMapObjectForm').reset();
+                    loadExhibits();
+                    loadDashboard(); // Refresh stats
+                } else {
+                    showError(data.message || 'Error creating exhibit');
+                }
+            } catch (error) {
+                console.error('Error creating exhibit:', error);
+                showError('Error creating exhibit');
+            }
+        });
+
+        // Bulk CSV upload
+        document.getElementById('bulkUploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showError('Please select a CSV file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const progressDiv = document.getElementById('uploadProgress');
+            progressDiv.style.display = 'block';
+
+            try {
+                const response = await fetch('/api/MapObjectAdmin/bulk-upload', {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                });
+
+                const data = await response.json();
+                progressDiv.style.display = 'none';
+
+                if (response.ok) {
+                    showSuccess(`Successfully uploaded ${data.count} exhibits!`);
+                    fileInput.value = '';
+                    loadExhibits();
+                    loadDashboard(); // Refresh stats
+                    
+                    if (data.errors && data.errors.length > 0) {
+                        console.warn('Upload errors:', data.errors);
+                        showError(`Some rows had errors. Check console for details.`);
+                    }
+                } else {
+                    showError(data.message || 'Error uploading CSV file');
+                    if (data.errors) {
+                        console.error('Upload errors:', data.errors);
+                    }
+                }
+            } catch (error) {
+                console.error('Error uploading CSV:', error);
+                showError('Error uploading CSV file');
+                progressDiv.style.display = 'none';
+            }
+        });
+
+        // Load exhibits list
+        async function loadExhibits() {
+            try {
+                const response = await fetch('/api/MapObjectAdmin/list', {
+                    credentials: 'include'
+                });
+                
+                if (response.status === 401) {
+                    window.location.href = '/admin/login.html';
+                    return;
+                }
+
+                const data = await response.json();
+                const exhibitsList = document.getElementById('exhibitsList');
+                
+                if (data.length === 0) {
+                    exhibitsList.innerHTML = '<p>No exhibits found. Create your first exhibit above!</p>';
+                    return;
+                }
+
+                exhibitsList.innerHTML = data.map(exhibit => `
+                    <div class="exhibit-item">
+                        <div class="exhibit-info">
+                            <div class="exhibit-name">${exhibit.name}</div>
+                            <div class="exhibit-details">
+                                Type: ${exhibit.type} | 
+                                ${exhibit.category ? `Category: ${exhibit.category} | ` : ''}
+                                Position: (${exhibit.x}, ${exhibit.y}, ${exhibit.z}) |
+                                ${exhibit.isUnlocked ? 'Unlocked' : 'Locked'} |
+                                ${exhibit.isDiscoverable ? 'Discoverable' : 'Hidden'}
+                            </div>
+                        </div>
+                        <div class="exhibit-actions">
+                            <button class="btn btn-danger" onclick="deleteExhibit(${exhibit.id})">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading exhibits:', error);
+                showError('Error loading exhibits');
+            }
+        }
+
+        // Delete exhibit
+        async function deleteExhibit(id) {
+            if (!confirm('Are you sure you want to delete this exhibit? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/MapObjectAdmin/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showSuccess('Exhibit deleted successfully!');
+                    loadExhibits();
+                    loadDashboard(); // Refresh stats
+                } else {
+                    showError(data.message || 'Error deleting exhibit');
+                }
+            } catch (error) {
+                console.error('Error deleting exhibit:', error);
+                showError('Error deleting exhibit');
+            }
+        }
+
+        // Download CSV template
+        document.getElementById('downloadTemplate').addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            const csvContent = `Name,Type,Description,Category,Era,Manufacturer,FirstFlight,Status,X,Y,Z,ImageUrl,ModelUrl,Video360Url,IsInteractive,IsDiscoverable,IsUnlocked,ExperienceValue,DifficultyLevel
+SR-71 Blackbird,Aircraft,The fastest aircraft ever built,Reconnaissance,1960s,Lockheed,1964-12-22,Retired,100,150,0,,,true,true,false,100,3
+F-22 Raptor,Aircraft,Fifth-generation stealth fighter aircraft,Fighter,2000s,Lockheed Martin,1997-09-07,Active,300,250,0,,,true,true,false,150,4
+Apollo 11 Command Module,Spacecraft,The spacecraft that took humans to the moon,Manned,1960s,North American Aviation,1969-07-16,Historic,200,100,0,,,true,true,true,200,5`;
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'map_objects_template.csv');
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
 
         // Initialize
         checkAuth();
