@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>866bafa3-4bc0-49e6-8b37-0ea72a5ccf9d</UserSecretsId>
+    <AssemblyName>InteractiveMap</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

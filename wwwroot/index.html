@@ -593,6 +593,9 @@
             showObjectDetails(obj);
             logInteraction(obj.id, 'click');
             
+            // Reset conversation history when selecting a new object (for demo)
+            conversationHistory = [];
+            
             // Automatically generate description when object is selected
             generateContent('description');
         }
@@ -869,8 +872,9 @@
                 });
             });
             
-            // Load conversation history from localStorage
-            loadConversationHistory();
+            // Reset conversation history for demo (no persistence across reloads)
+            conversationHistory = [];
+            renderConversationHistory();
             
             // Focus on input
             setTimeout(() => {
@@ -895,28 +899,8 @@
             }, 300); // Match the transition duration (0.3s)
         }
 
-        function loadConversationHistory() {
-            const historyKey = `chatbot_history_${playerId}_${selectedObject.id}`;
-            const stored = localStorage.getItem(historyKey);
-            if (stored) {
-                try {
-                    conversationHistory = JSON.parse(stored);
-                } catch (e) {
-                    console.error('Error loading conversation history:', e);
-                    conversationHistory = [];
-                }
-            } else {
-                conversationHistory = [];
-            }
-            
-            renderConversationHistory();
-        }
-
-        function saveConversationHistory() {
-            if (!selectedObject) return;
-            const historyKey = `chatbot_history_${playerId}_${selectedObject.id}`;
-            localStorage.setItem(historyKey, JSON.stringify(conversationHistory));
-        }
+        // Removed loadConversationHistory() and saveConversationHistory() for demo
+        // Conversation history now resets on page reload
 
         function renderConversationHistory() {
             const messagesContainer = document.getElementById('chatbotMessages');
@@ -942,7 +926,7 @@
 
         function addMessageToHistory(role, content) {
             conversationHistory.push({ role, content });
-            saveConversationHistory();
+            // Removed saveConversationHistory() for demo - history resets on reload
             renderConversationHistory();
         }
 
@@ -1163,6 +1147,14 @@
             async function loadSplatModels() {
                 if (!terrain) return;
                 
+                // Wait for mapObjects to be loaded
+                if (!mapObjects || mapObjects.length === 0) {
+                    console.log('Waiting for map objects to load...');
+                    // Wait a bit and try again
+                    setTimeout(() => loadSplatModels(), 100);
+                    return;
+                }
+                
                 // Check if SplatMesh is available
                 if (!SplatMesh) {
                     console.error('SplatMesh not available. Check console for import errors.');
@@ -1220,7 +1212,16 @@
                         group.rotation.x = -Math.PI / 2;   // keep them upright
                         group.rotation.z = Math.PI / 2;    // yaw to face down the long axis
                         
-                        group.userData.mapObject = { id: i + 1, name: `Plane ${i + 1}` };
+                        // Match splat model with database MapObject by ID (first splat = ID 1, second = ID 2, etc.)
+                        const mapObjectId = i + 1;
+                        const mapObject = mapObjects.find(obj => obj.id === mapObjectId);
+                        if (mapObject) {
+                            group.userData.mapObject = mapObject;
+                        } else {
+                            // Fallback if MapObject not found
+                            console.warn(`MapObject with ID ${mapObjectId} not found. Using fallback name.`);
+                            group.userData.mapObject = { id: mapObjectId, name: `Aircraft ${mapObjectId}`, description: 'Aircraft information not available.' };
+                        }
                         group.userData.splatMesh = splat;
                         
                         scene.add(group);

@@ -1,9 +1,20 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.StaticFiles;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 using InteractiveMapGame.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Add forwarded headers middleware to handle reverse proxy scenarios
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor |
+                               ForwardedHeaders.XForwardedProto;
+    // Honor path base from reverse proxy
+    options.ForwardedPrefixHeaderName = "X-Forwarded-Prefix";
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Add services to the container.
 builder.Services.AddControllers()
@@ -12,22 +23,6 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 builder.Services.AddHttpClient();
-
-// Configure Authentication
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.LoginPath = "/admin/login.html";
-        options.LogoutPath = "/api/Admin/logout";
-        options.AccessDeniedPath = "/admin/login.html";
-        options.ExpireTimeSpan = TimeSpan.FromDays(7);
-        options.SlidingExpiration = true;
-        options.Cookie.HttpOnly = true;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-        options.Cookie.SameSite = SameSiteMode.Lax;
-    });
-
-builder.Services.AddAuthorization();
 
 // Add Entity Framework
 builder.Services.AddDbContext<MapGameDbContext>(options =>
@@ -66,6 +61,16 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+// Use forwarded headers middleware (must be early in pipeline)
+app.UseForwardedHeaders();
+
+// Configure path base from environment variable
+var pathBase = builder.Configuration["ASPNETCORE_PATHBASE"];
+if (!string.IsNullOrEmpty(pathBase))
+{
+    app.UsePathBase(pathBase);
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -96,18 +101,29 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseRouting();
 
-app.UseAuthentication();
-app.UseAuthorization();
-
 app.MapControllers();
 
 // Fallback to index.html for SPA routing
 app.MapFallbackToFile("index.html");
 
-// Apply database schema updates on startup
+// Apply database migrations and schema updates on startup
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MapGameDbContext>();
+    try
+    {
+        // Apply any pending migrations automatically
+        // This ensures the database schema is up-to-date when the app starts
+        dbContext.Database.Migrate();
+        Console.WriteLine("Database migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        // Log but don't fail startup if migrations fail
+        // This allows the app to start even if the database is temporarily unavailable
+        Console.WriteLine($"Warning: Could not apply database migrations: {ex.Message}");
+    }
+    
     try
     {
         // Update InteractionLogs columns to nvarchar(max) if not already
